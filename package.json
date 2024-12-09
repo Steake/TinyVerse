@@ -1,0 +1,38 @@
+{
+  "name": "tinyverse-stage",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.node.json"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^3.1.2",
+    "@tsconfig/svelte": "^5.0.4",
+    "@types/d3": "^7.4.3",
+    "autoprefixer": "^10.4.17",
+    "daisyui": "^4.7.2",
+    "jszip": "^3.10.1",
+    "postcss": "^8.4.35",
+    "svelte": "^4.2.19",
+    "svelte-check": "^3.8.6",
+    "tailwindcss": "^3.4.1",
+    "tslib": "^2.7.0",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.2"
+  },
+  "dependencies": {
+    "@tiptap/core": "^2.2.4",
+    "@tiptap/extension-placeholder": "^2.2.4",
+    "@tiptap/pm": "^2.2.4",
+    "@tiptap/starter-kit": "^2.2.4",
+    "chart.js": "^4.4.1",
+    "d3": "^7.8.5",
+    "gsap": "^3.12.5",
+    "lodash-es": "^4.17.21",
+    "papaparse": "^5.4.1"
+  }
+}
