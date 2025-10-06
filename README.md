@@ -8,8 +8,11 @@
 
 ## 📚 Documentation
 
+- **[Repository Evaluation](./EVALUATION.md)** - Comprehensive project assessment
 - **[Quick Start Guide](./QUICK_START.md)** - Get started in 5 minutes
-- **[Development Roadmap](./ROADMAP.md)** - Comprehensive development plan
+- **[Development Roadmap](./ROADMAP.md)** - Detailed development plan
+- **[Architecture Guide](./ARCHITECTURE.md)** - System architecture and design
+- **[Contributing Guide](./CONTRIBUTING.md)** - How to contribute
 - **[API Specification](./API_spec.md)** - Complete API documentation
 
 ## 🎭 What is TinyVerse Stage?
@@ -153,6 +156,9 @@ Built with Svelte, TypeScript, and Vite.
 **Last Updated**: 2025
 
 For more details, see:
+- [Repository Evaluation](./EVALUATION.md)
 - [Quick Start Guide](./QUICK_START.md)
 - [Development Roadmap](./ROADMAP.md)
+- [Architecture Guide](./ARCHITECTURE.md)
+- [Contributing Guide](./CONTRIBUTING.md)
 - [API Documentation](./API_spec.md)
