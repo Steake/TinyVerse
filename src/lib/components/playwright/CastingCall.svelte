@@ -11,11 +11,9 @@
   let editingAgent: Partial<Agent> | null = null;
   let isEditing = false;
 
-  onMount(() => {
-    if ($agentStore.length === 0) {
-      const { mockAgents } = require('../../utils/mock-data/agents');
-      mockAgents.forEach(agent => agentStore.addAgent(agent));
-    }
+  onMount(async () => {
+    // Load agents from backend
+    await agentStore.fetchAgents();
   });
 
   function handleEdit(event: CustomEvent<Agent>) {
@@ -24,15 +22,21 @@
     showForm = true;
   }
 
-  function handleSave(event: CustomEvent<Agent>) {
+  async function handleSave(event: CustomEvent<Agent>) {
     const agent = event.detail;
-    if (agent.id && agentStore.getAgent(agent.id)) {
-      agentStore.updateAgent(agent);
-    } else {
-      agentStore.addAgent(agent);
+    try {
+      if (agent.id && agentStore.getAgent(agent.id)) {
+        await agentStore.updateAgent(agent);
+      } else {
+        await agentStore.addAgent(agent);
+      }
+      showForm = false;
+      editingAgent = null;
+      isEditing = false;
+    } catch (error) {
+      console.error('Failed to save agent:', error);
+      // You might want to show an error toast here
     }
-    showForm = false;
-    editingAgent = null;
   }
 
   function handleCancel() {

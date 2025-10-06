@@ -8,18 +8,20 @@ export interface Agent {
   name: string;
   age: number;
   occupation: string;
-  occupationDescription: string;
-  nationality: string;
-  countryOfResidence: string;
-  routines: Routine[];
-  personalityTraits: string[];
-  professionalInterests: string[];
-  personalInterests: string[];
+  occupation_description?: string;
+  nationality?: string;
+  country_of_residence?: string;
+  personality_traits: string[];
+  professional_interests: string[];
+  personal_interests: string[];
   skills: Skill[];
-  relationships: Relationship[];
-  backstory: string;
+  backstory?: string;
+  created_at?: Date;
+  // UI-only fields (not sent to backend)
+  routines?: Routine[];
+  relationships?: Relationship[];
   profilePicture?: string;
-  emoji: string;
+  emoji?: string;
   group?: string;
   x?: number;
   y?: number;
@@ -35,7 +37,7 @@ export interface Routine {
 
 export interface Skill {
   name: string;
-  level: number;
+  level: number; // 0-10 to match backend
 }
 
 export interface Relationship {

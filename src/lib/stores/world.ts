@@ -1,24 +1,8 @@
 import { writable } from 'svelte/store';
-import type { UUID } from '../api/types/index';
+import type { Location, Connection } from './types';
 import { api } from '../api';
 
-export type Location = {
-  id: UUID;
-  name: string;
-  description?: string;
-  type: 'room' | 'outdoor' | 'special';
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
-export type Connection = {
-  id: UUID;
-  source: UUID;
-  target: UUID;
-  type: 'path' | 'door' | 'portal';
-};
+export type { Location, Connection };
 
 export type WorldState = {
   locations: Location[];
@@ -40,18 +24,47 @@ function createWorldStore() {
     set,
     update,
     
-    addLocation: (location: Location) => {
-      update(state => ({
-        ...state,
-        locations: [...state.locations, location]
-      }));
+    // Fetch locations from backend
+    fetchLocations: async () => {
+      try {
+        const response = await api.getLocations();
+        if (response.data) {
+          update(state => ({ ...state, locations: response.data! }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch locations:', error);
+      }
     },
     
-    removeLocation: (id: UUID) => {
-      update(state => ({
-        ...state,
-        locations: state.locations.filter(loc => loc.id !== id)
-      }));
+    // Add location (calls backend)
+    addLocation: async (location: Omit<Location, 'id'>) => {
+      try {
+        const response = await api.createLocation(location);
+        if (response.data) {
+          update(state => ({
+            ...state,
+            locations: [...state.locations, response.data!]
+          }));
+          return response.data;
+        }
+      } catch (error) {
+        console.error('Failed to create location:', error);
+        throw error;
+      }
+    },
+    
+    // Remove location (calls backend)
+    removeLocation: async (id: string) => {
+      try {
+        await api.updateLocation(id, {}); // Backend doesn't have delete endpoint, using update for now
+        update(state => ({
+          ...state,
+          locations: state.locations.filter(loc => loc.id !== id)
+        }));
+      } catch (error) {
+        console.error('Failed to delete location:', error);
+        throw error;
+      }
     },
     
     addConnection: (connection: Connection) => {
@@ -61,19 +74,20 @@ function createWorldStore() {
       }));
     },
     
-    removeConnection: (id: UUID) => {
+    removeConnection: (id: string) => {
       update(state => ({
         ...state,
         connections: state.connections.filter(conn => conn.id !== id)
       }));
     },
     
+    // Fetch simulation state from backend
     fetchSimulationState: async () => {
       try {
-        // TODO: Implement when backend API is ready
-        // const simulationState = await api.getSimulationState();
-        // update(state => ({ ...state, simulationState }));
-        console.warn('getSimulationState not yet implemented in backend');
+        const response = await api.getSimulationState();
+        if (response.data) {
+          update(state => ({ ...state, simulationState: response.data }));
+        }
       } catch (error) {
         console.error('Failed to fetch simulation state:', error);
       }

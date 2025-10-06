@@ -112,9 +112,9 @@ export class ApiClient {
     return this.request('GET', '/simulation/status');
   }
 
-  async controlSimulation(command: 'START' | 'PAUSE' | 'STEP', speed?: number): Promise<ApiResponse<void>> {
+  async controlSimulation(action: 'start' | 'pause' | 'stop' | 'step', steps?: number): Promise<ApiResponse<void>> {
     return this.request<void>('POST', '/simulation/control', { 
-      body: { command, speed } 
+      body: { action, steps } 
     });
   }
 
@@ -144,13 +144,7 @@ export class ApiClient {
   };
 
   async getSimulationState(): Promise<ApiResponse<any>> {
-    // TODO: Implement when backend endpoint exists
-    // return this.request('GET', '/simulation/state');
-    return Promise.resolve({ 
-      success: true, 
-      data: null,
-      message: 'Simulation state endpoint not yet implemented'
-    } as ApiResponse<any>);
+    return this.request('GET', '/simulation/state');
   }
 
   // Utility methods
