@@ -64,8 +64,8 @@
 
         return result;
       });
-    } catch (e) {
-      error = e.message;
+    } catch (e: any) {
+      error = e.message || 'Analysis failed';
       results = [];
     } finally {
       loading = false;

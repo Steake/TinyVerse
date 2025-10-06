@@ -1,3 +1,4 @@
+import { get } from 'svelte/store';
 import { worldStore } from '../../stores/world';
 import { agentStore } from '../../stores/agents';
 import { simulationStore } from '../../stores/simulation';
@@ -25,20 +26,26 @@ export async function exportProject(format: ExportFormat, options: ExportOptions
 }
 
 async function exportWorld() {
+  const world = get(worldStore);
   return {
-    locations: worldStore.getLocations(),
-    connections: worldStore.getConnections()
+    locations: world.locations,
+    connections: world.connections
   };
 }
 
 async function exportAgents() {
-  return agentStore.getAgents();
+  return get(agentStore);
 }
 
 async function exportSimulation() {
+  const state = get(simulationStore);
   return {
-    logs: simulationStore.getLogs(),
-    currentState: simulationStore.getCurrentState()
+    logs: state.logs,
+    currentState: {
+      isRunning: state.isRunning,
+      currentTime: state.currentTime,
+      speed: state.speed
+    }
   };
 }
 
