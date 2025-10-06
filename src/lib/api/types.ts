@@ -27,6 +27,7 @@ export interface QueryParams {
   pageSize?: number;
   sort?: string;
   filter?: Record<string, any>;
+  [key: string]: string | number | boolean | undefined | Record<string, any>;
 }
 
 export interface SimulationAction {
@@ -40,7 +41,9 @@ export interface SimulationAction {
 export interface LogFilters {
   agentId?: string;
   action?: string;
-  startTime?: Date;
-  endTime?: Date;
+  startTime?: string;
+  endTime?: string;
   location?: string;
+  limit?: number;
+  offset?: number;
 }

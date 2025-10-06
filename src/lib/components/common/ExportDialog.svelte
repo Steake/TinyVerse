@@ -26,8 +26,8 @@
     try {
       await exportProject(format, options);
       dispatch('close');
-    } catch (e) {
-      error = e.message;
+    } catch (e: any) {
+      error = e.message || 'Export failed';
     } finally {
       isExporting = false;
     }

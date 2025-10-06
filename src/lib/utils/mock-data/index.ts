@@ -16,7 +16,7 @@ export function initializeMockData(stores: {
     agentStore.addAgent(agent);
   });
 
-  // Initialize world
+  // Initialize world using the new store methods
   mockLocations.forEach(location => {
     worldStore.addLocation(location);
   });

@@ -3,8 +3,9 @@ Simulation control API endpoints.
 """
 from fastapi import APIRouter, HTTPException, status
 from typing import List
-from app.schemas import SimulationControl, SimulationState, SimulationLog
+from app.schemas import SimulationControl, SimulationState, SimulationLog, SimulationAction
 from app.services import adapter
+from app.api.websocket import broadcast_simulation_event
 
 
 router = APIRouter(prefix="/simulation", tags=["simulation"])
@@ -20,18 +21,44 @@ async def control_simulation(control: SimulationControl):
     try:
         if control.action == "start":
             adapter.run_simulation(control.steps or 1)
+            
+            # Broadcast event to WebSocket clients
+            await broadcast_simulation_event("simulation_started", {
+                "action": "start",
+                "steps": control.steps or 1
+            })
+            
             return {"message": f"Simulation started for {control.steps} steps"}
         
         elif control.action == "pause":
             adapter.pause_simulation()
+            
+            # Broadcast event to WebSocket clients
+            await broadcast_simulation_event("simulation_paused", {
+                "action": "pause"
+            })
+            
             return {"message": "Simulation paused"}
         
         elif control.action == "stop":
             adapter.pause_simulation()
+            
+            # Broadcast event to WebSocket clients
+            await broadcast_simulation_event("simulation_stopped", {
+                "action": "stop"
+            })
+            
             return {"message": "Simulation stopped"}
         
         elif control.action == "step":
             adapter.run_simulation(1)
+            
+            # Broadcast event to WebSocket clients
+            await broadcast_simulation_event("simulation_step", {
+                "action": "step",
+                "current_step": adapter.current_step
+            })
+            
             return {"message": "Simulation advanced 1 step"}
         
         else:
@@ -81,34 +108,16 @@ async def get_simulation_logs(limit: int = 100):
         )
 
 
-@router.post("/action")
-async def execute_simulation_action(action: dict):
+@router.post("/action", response_model=SimulationLog, status_code=status.HTTP_201_CREATED)
+async def execute_simulation_action(action: SimulationAction):
     """
-    Execute a manual simulation action.
+    Execute a simulation action.
     
-    Allows manual intervention in the simulation by executing
-    specific actions for agents.
-    
-    Request body should contain:
-    - type: Action type (MOVE, TALK, INTERACT)
-    - agentId: Agent performing the action
-    - targetId: Optional target agent/location
-    - data: Optional action-specific data
+    Allows triggering specific agent actions in the simulation.
     """
     try:
-        # Validate required fields
-        if "type" not in action or "agentId" not in action:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing required fields: type and agentId"
-            )
-        
-        # Execute the action through the adapter
-        result = adapter.execute_action(action)
-        
-        return result
-    except HTTPException:
-        raise
+        log = adapter.execute_action(action.model_dump())
+        return log
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

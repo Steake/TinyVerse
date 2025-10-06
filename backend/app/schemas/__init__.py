@@ -13,6 +13,7 @@ from .agent import (
     SimulationControl,
     SimulationState,
     SimulationLog,
+    SimulationAction,
     HealthCheck,
 )
 
@@ -30,5 +31,6 @@ __all__ = [
     "SimulationControl",
     "SimulationState",
     "SimulationLog",
+    "SimulationAction",
     "HealthCheck",
 ]

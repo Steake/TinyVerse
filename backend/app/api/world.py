@@ -3,23 +3,17 @@ World API endpoints for locations and connections.
 """
 from fastapi import APIRouter, HTTPException, status
 from typing import List
-from app.schemas import (
-    Location,
-    LocationCreate,
-    LocationUpdate,
-    Connection,
-    ConnectionCreate,
-)
+from app.schemas import Location, LocationCreate, LocationUpdate, Connection, ConnectionCreate
 from app.services import adapter
 
 
-router = APIRouter(prefix="/locations", tags=["world"])
+router = APIRouter(prefix="", tags=["world"])
 
 
-@router.get("", response_model=List[Location])
+@router.get("/locations", response_model=List[Location])
 async def list_locations():
     """
-    Retrieve all locations.
+    List all locations.
     
     Returns all locations in the world.
     """
@@ -33,12 +27,12 @@ async def list_locations():
         )
 
 
-@router.post("", response_model=Location, status_code=status.HTTP_201_CREATED)
+@router.post("/locations", response_model=Location, status_code=status.HTTP_201_CREATED)
 async def create_location(location: LocationCreate):
     """
     Create a new location.
     
-    Creates a new location in the world.
+    This endpoint creates a new location in the world.
     """
     try:
         location_data = adapter.create_location(location.model_dump())
@@ -50,34 +44,23 @@ async def create_location(location: LocationCreate):
         )
 
 
-@router.patch("/{location_id}", response_model=Location)
-async def update_location(location_id: str, location_update: LocationUpdate):
+@router.patch("/locations/{location_id}", response_model=Location)
+async def update_location(location_id: str, location: LocationUpdate):
     """
     Update an existing location.
     
-    Updates location attributes. Only provided fields will be updated.
+    Updates the specified location with new values.
     """
-    try:
-        updated_location = adapter.update_location(
-            location_id, 
-            location_update.model_dump(exclude_unset=True)
-        )
-        if not updated_location:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Location {location_id} not found"
-            )
-        return updated_location
-    except HTTPException:
-        raise
-    except Exception as e:
+    updated_location = adapter.update_location(location_id, location.model_dump(exclude_unset=True))
+    if not updated_location:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update location: {str(e)}"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location {location_id} not found"
         )
+    return updated_location
 
 
-@router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/locations/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_location(location_id: str):
     """
     Delete a location.
@@ -92,16 +75,12 @@ async def delete_location(location_id: str):
     return None
 
 
-# Connection endpoints
-connections_router = APIRouter(prefix="/connections", tags=["world"])
-
-
-@connections_router.get("", response_model=List[Connection])
+@router.get("/connections", response_model=List[Connection])
 async def list_connections():
     """
-    Retrieve all connections between locations.
+    List all connections.
     
-    Returns all connections in the world.
+    Returns all connections between locations.
     """
     try:
         connections = adapter.list_connections()
@@ -113,21 +92,16 @@ async def list_connections():
         )
 
 
-@connections_router.post("", response_model=Connection, status_code=status.HTTP_201_CREATED)
+@router.post("/connections", response_model=Connection, status_code=status.HTTP_201_CREATED)
 async def create_connection(connection: ConnectionCreate):
     """
-    Create a new connection between locations.
+    Create a new connection.
     
-    Creates a connection linking two locations.
+    This endpoint creates a new connection between two locations.
     """
     try:
         connection_data = adapter.create_connection(connection.model_dump())
         return connection_data
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -135,7 +109,7 @@ async def create_connection(connection: ConnectionCreate):
         )
 
 
-@connections_router.delete("/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/connections/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_connection(connection_id: str):
     """
     Delete a connection.

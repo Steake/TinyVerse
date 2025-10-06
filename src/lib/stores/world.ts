@@ -32,15 +32,53 @@ const initialState: WorldState = {
   simulationState: null
 };
 
-export const worldStore = writable(initialState);
+function createWorldStore() {
+  const { subscribe, set, update } = writable(initialState);
 
-async function fetchSimulationState() {
-  try {
-    const simulationState = await api.getSimulationState();
-    worldStore.update(state => ({ ...state, simulationState }));
-  } catch (error) {
-    console.error('Failed to fetch simulation state:', error);
-  }
+  return {
+    subscribe,
+    set,
+    update,
+    
+    addLocation: (location: Location) => {
+      update(state => ({
+        ...state,
+        locations: [...state.locations, location]
+      }));
+    },
+    
+    removeLocation: (id: UUID) => {
+      update(state => ({
+        ...state,
+        locations: state.locations.filter(loc => loc.id !== id)
+      }));
+    },
+    
+    addConnection: (connection: Connection) => {
+      update(state => ({
+        ...state,
+        connections: [...state.connections, connection]
+      }));
+    },
+    
+    removeConnection: (id: UUID) => {
+      update(state => ({
+        ...state,
+        connections: state.connections.filter(conn => conn.id !== id)
+      }));
+    },
+    
+    fetchSimulationState: async () => {
+      try {
+        // TODO: Implement when backend API is ready
+        // const simulationState = await api.getSimulationState();
+        // update(state => ({ ...state, simulationState }));
+        console.warn('getSimulationState not yet implemented in backend');
+      } catch (error) {
+        console.error('Failed to fetch simulation state:', error);
+      }
+    }
+  };
 }
 
-fetchSimulationState();
+export const worldStore = createWorldStore();

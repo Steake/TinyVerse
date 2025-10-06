@@ -101,7 +101,7 @@ export class ApiClient {
   }
 
   async getLogs(filters?: LogFilters): Promise<ApiResponse<SimulationLog[]>> {
-    return this.request<SimulationLog[]>('GET', '/simulation/logs', { params: filters });
+    return this.request<SimulationLog[]>('GET', '/simulation/logs', { params: filters as QueryParams });
   }
 
   async getSimulationStatus(): Promise<ApiResponse<{
@@ -110,6 +110,47 @@ export class ApiClient {
     speed: number;
   }>> {
     return this.request('GET', '/simulation/status');
+  }
+
+  async controlSimulation(command: 'START' | 'PAUSE' | 'STEP', speed?: number): Promise<ApiResponse<void>> {
+    return this.request<void>('POST', '/simulation/control', { 
+      body: { command, speed } 
+    });
+  }
+
+  // Story endpoints (placeholder - to be implemented with backend)
+  story = {
+    list: async (): Promise<ApiResponse<any[]>> => {
+      return this.request<any[]>('GET', '/stories');
+    },
+    getStories: async (): Promise<ApiResponse<any[]>> => {
+      return this.request<any[]>('GET', '/stories');
+    },
+    get: async (id: string): Promise<ApiResponse<any>> => {
+      return this.request<any>('GET', `/stories/${id}`);
+    },
+    create: async (data: any): Promise<ApiResponse<any>> => {
+      return this.request<any>('POST', '/stories', { body: data });
+    },
+    createStory: async (data: any): Promise<ApiResponse<any>> => {
+      return this.request<any>('POST', '/stories', { body: data });
+    },
+    updateStory: async (id: string, data: any): Promise<ApiResponse<any>> => {
+      return this.request<any>('PATCH', `/stories/${id}`, { body: data });
+    },
+    delete: async (id: string): Promise<ApiResponse<void>> => {
+      return this.request<void>('DELETE', `/stories/${id}`);
+    }
+  };
+
+  async getSimulationState(): Promise<ApiResponse<any>> {
+    // TODO: Implement when backend endpoint exists
+    // return this.request('GET', '/simulation/state');
+    return Promise.resolve({ 
+      success: true, 
+      data: null,
+      message: 'Simulation state endpoint not yet implemented'
+    } as ApiResponse<any>);
   }
 
   // Utility methods

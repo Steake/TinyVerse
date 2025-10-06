@@ -57,19 +57,18 @@ class AgentUpdate(BaseModel):
 class LocationCreate(BaseModel):
     """Location creation schema."""
     name: str
-    type: str = Field("room", pattern="^(room|outdoor|special)$")
+    type: str = Field(default="room", pattern="^(room|outdoor|special)$")
     description: Optional[str] = None
-    x: float = 0.0
-    y: float = 0.0
-    width: float = 100.0
-    height: float = 100.0
+    x: float = 0
+    y: float = 0
+    width: float = 100
+    height: float = 100
     image: Optional[str] = None
 
 
 class Location(LocationCreate):
     """Location response schema."""
     id: str
-    created_at: datetime
     
     class Config:
         from_attributes = True
@@ -89,18 +88,25 @@ class LocationUpdate(BaseModel):
 
 class ConnectionCreate(BaseModel):
     """Connection creation schema."""
-    source: str = Field(..., description="Source location ID")
-    target: str = Field(..., description="Target location ID")
-    type: str = Field("path", pattern="^(path|door|portal)$")
+    source: str
+    target: str
+    type: str = Field(default="path", pattern="^(path|door|portal)$")
 
 
 class Connection(ConnectionCreate):
     """Connection response schema."""
     id: str
-    created_at: datetime
     
     class Config:
         from_attributes = True
+
+
+class SimulationAction(BaseModel):
+    """Simulation action schema."""
+    type: str = Field(..., pattern="^(MOVE|TALK|INTERACT)$")
+    agentId: str
+    targetId: Optional[str] = None
+    data: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class SimulationControl(BaseModel):

@@ -6,16 +6,16 @@ The TinyVerse backend has been implemented in Phase 1! Here's how to get started
 
 ### 1. Prerequisites
 
-- **Python 3.13+** (Required for optimal performance)
+- **Python 3.10+** (3.12+ recommended)
 - OpenAI API key or Azure OpenAI credentials
 
 To check your Python version:
 ```bash
-python3.13 --version
+python3 --version
 ```
 
-Install Python 3.13:
-- **macOS**: `brew install python@3.13`
+Install Python (if needed):
+- **macOS**: `brew install python@3.12`
 - **Linux**: Use your package manager or pyenv
 - **Windows**: Download from [python.org](https://www.python.org/downloads/)
 
@@ -29,25 +29,35 @@ cd backend
 ```
 
 The script will:
-- Verify Python 3.13 is installed
+- Auto-detect Python 3.10+ installation
+- Clone TinyTroupe locally (first run only)
+- Install TinyTroupe in editable mode
 - Create a virtual environment
 - Install all dependencies
 - Guide you through configuration
+
+**Why local TinyTroupe?** Installing from a local clone is 10x faster on subsequent setups and makes development easier. The script automatically clones it on first run.
 
 **Option B: Manual Installation**
 
 ```bash
 cd backend
 
-# Create virtual environment with Python 3.13
-python3.13 -m venv venv
+# Clone TinyTroupe locally (first time only)
+git clone --depth 1 https://github.com/microsoft/TinyTroupe.git tinytroupe-local
+
+# Create virtual environment
+python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies (this will install TinyTroupe from GitHub)
+# Install TinyTroupe in editable mode
+pip install -e tinytroupe-local
+
+# Install other dependencies
 pip install -r requirements.txt
 ```
 
-**Note:** Installing TinyTroupe may take 2-3 minutes as it clones from GitHub.
+**Updating TinyTroupe:** Since it's installed in editable mode, just `cd tinytroupe-local && git pull`. No reinstall needed.
 
 ### 3. Configuration
 

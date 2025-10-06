@@ -1,6 +1,8 @@
 import { writable } from 'svelte/store';
 import type { AgentGroup } from './types';
 
+export type { AgentGroup } from './types';
+
 function createGroupStore() {
   const { subscribe, set, update } = writable<AgentGroup[]>([
     { id: 'main', name: 'Main Cast' },

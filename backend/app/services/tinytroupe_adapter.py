@@ -5,7 +5,7 @@ This adapter translates between TinyVerse's REST API concepts and TinyTroupe's
 Python API, managing TinyPerson agents and TinyWorld simulations.
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from tinytroupe.agent import TinyPerson
 from tinytroupe.environment import TinyWorld
@@ -28,6 +28,9 @@ class TinyTroupeAdapter:
         self.world = TinyWorld("TinyVerse Simulation")
         self.simulation_running = False
         self.current_step = 0
+        self._agent_name_to_id: Dict[str, str] = {}
+        self._log_history: List[Dict[str, Any]] = []
+        self._last_log_index = 0
     
     def create_agent(self, agent_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -77,11 +80,12 @@ class TinyTroupeAdapter:
             "name": agent_data["name"],
             "age": agent_data["age"],
             "occupation": agent_data["occupation"],
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         }
         
         # Add to world
         self.world.add_agent(person)
+        self._agent_name_to_id[agent_data["name"]] = agent_id
         
         return {
             "id": agent_id,
@@ -120,6 +124,34 @@ class TinyTroupeAdapter:
         """
         return [self.get_agent(agent_id) for agent_id in self.agents.keys()]
     
+    def update_agent(self, agent_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Update an agent.
+        
+        Args:
+            agent_id: Agent identifier
+            update_data: Dictionary with fields to update
+            
+        Returns:
+            Updated agent or None if not found
+        """
+        if agent_id not in self.agents:
+            return None
+        
+        # Update metadata
+        self.agent_metadata[agent_id].update(update_data)
+        
+        # Update TinyPerson attributes if needed
+        person = self.agents[agent_id]
+        if "name" in update_data:
+            person.name = update_data["name"]
+        if "age" in update_data:
+            person.define("age", update_data["age"])
+        if "occupation" in update_data:
+            person.define("occupation", update_data["occupation"])
+        
+        return self.get_agent(agent_id)
+    
     def delete_agent(self, agent_id: str) -> bool:
         """
         Delete an agent.
@@ -137,224 +169,8 @@ class TinyTroupeAdapter:
         self.world.remove_agent(person)
         del self.agents[agent_id]
         del self.agent_metadata[agent_id]
+        self._agent_name_to_id.pop(person.name, None)
         return True
-    
-    def update_agent(self, agent_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """
-        Update an agent's attributes.
-        
-        Args:
-            agent_id: Agent identifier
-            update_data: Dictionary with fields to update
-            
-        Returns:
-            Updated agent data or None if not found
-        """
-        if agent_id not in self.agents:
-            return None
-        
-        person = self.agents[agent_id]
-        metadata = self.agent_metadata[agent_id]
-        
-        # Update TinyPerson attributes
-        if "age" in update_data:
-            person.define("age", update_data["age"])
-            metadata["age"] = update_data["age"]
-        
-        if "occupation" in update_data:
-            person.define("occupation", update_data["occupation"])
-            metadata["occupation"] = update_data["occupation"]
-        
-        if "nationality" in update_data:
-            person.define("nationality", update_data["nationality"])
-        
-        if "country_of_residence" in update_data:
-            person.define("residence", update_data["country_of_residence"])
-        
-        if "personality_traits" in update_data:
-            for trait in update_data["personality_traits"]:
-                person.define("personality_trait", trait)
-        
-        if "professional_interests" in update_data:
-            person.define("professional_interests", update_data["professional_interests"])
-        
-        if "personal_interests" in update_data:
-            person.define("personal_interests", update_data["personal_interests"])
-        
-        if "backstory" in update_data:
-            person.define("backstory", update_data["backstory"])
-        
-        # Update metadata
-        metadata.update({k: v for k, v in update_data.items() if k in metadata})
-        
-        return self.get_agent(agent_id)
-    
-    # Location management methods
-    
-    def create_location(self, location_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Create a location in the world.
-        
-        Args:
-            location_data: Dictionary with location attributes
-            
-        Returns:
-            Dictionary with location ID and metadata
-        """
-        location_id = str(uuid.uuid4())
-        
-        location = {
-            "id": location_id,
-            "name": location_data["name"],
-            "type": location_data.get("type", "room"),
-            "description": location_data.get("description", ""),
-            "x": location_data.get("x", 0.0),
-            "y": location_data.get("y", 0.0),
-            "width": location_data.get("width", 100.0),
-            "height": location_data.get("height", 100.0),
-            "image": location_data.get("image"),
-            "created_at": datetime.utcnow(),
-        }
-        
-        self.locations[location_id] = location
-        return location
-    
-    def get_location(self, location_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get location details by ID.
-        
-        Args:
-            location_id: Location identifier
-            
-        Returns:
-            Location data or None if not found
-        """
-        return self.locations.get(location_id)
-    
-    def list_locations(self) -> List[Dict[str, Any]]:
-        """
-        List all locations.
-        
-        Returns:
-            List of location data dictionaries
-        """
-        return list(self.locations.values())
-    
-    def update_location(self, location_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """
-        Update a location's attributes.
-        
-        Args:
-            location_id: Location identifier
-            update_data: Dictionary with fields to update
-            
-        Returns:
-            Updated location data or None if not found
-        """
-        if location_id not in self.locations:
-            return None
-        
-        location = self.locations[location_id]
-        location.update({k: v for k, v in update_data.items() if k != "id" and k != "created_at"})
-        
-        return location
-    
-    def delete_location(self, location_id: str) -> bool:
-        """
-        Delete a location.
-        
-        Args:
-            location_id: Location identifier
-            
-        Returns:
-            True if deleted, False if not found
-        """
-        if location_id not in self.locations:
-            return False
-        
-        # Delete all connections involving this location
-        connections_to_delete = [
-            conn_id for conn_id, conn in self.connections.items()
-            if conn["source"] == location_id or conn["target"] == location_id
-        ]
-        for conn_id in connections_to_delete:
-            del self.connections[conn_id]
-        
-        del self.locations[location_id]
-        return True
-    
-    # Connection management methods
-    
-    def create_connection(self, connection_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Create a connection between locations.
-        
-        Args:
-            connection_data: Dictionary with connection attributes
-            
-        Returns:
-            Dictionary with connection ID and metadata
-        """
-        source_id = connection_data["source"]
-        target_id = connection_data["target"]
-        
-        # Validate that both locations exist
-        if source_id not in self.locations:
-            raise ValueError(f"Source location {source_id} not found")
-        if target_id not in self.locations:
-            raise ValueError(f"Target location {target_id} not found")
-        
-        connection_id = str(uuid.uuid4())
-        
-        connection = {
-            "id": connection_id,
-            "source": source_id,
-            "target": target_id,
-            "type": connection_data.get("type", "path"),
-            "created_at": datetime.utcnow(),
-        }
-        
-        self.connections[connection_id] = connection
-        return connection
-    
-    def get_connection(self, connection_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get connection details by ID.
-        
-        Args:
-            connection_id: Connection identifier
-            
-        Returns:
-            Connection data or None if not found
-        """
-        return self.connections.get(connection_id)
-    
-    def list_connections(self) -> List[Dict[str, Any]]:
-        """
-        List all connections.
-        
-        Returns:
-            List of connection data dictionaries
-        """
-        return list(self.connections.values())
-    
-    def delete_connection(self, connection_id: str) -> bool:
-        """
-        Delete a connection.
-        
-        Args:
-            connection_id: Connection identifier
-            
-        Returns:
-            True if deleted, False if not found
-        """
-        if connection_id not in self.connections:
-            return False
-        
-        del self.connections[connection_id]
-        return True
-    
-    # Simulation methods
     
     def run_simulation(self, steps: int = 1) -> None:
         """
@@ -385,6 +201,61 @@ class TinyTroupeAdapter:
             "world_name": self.world.name,
         }
     
+    def create_location(self, location_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a location.
+        
+        Args:
+            location_data: Dictionary with location attributes
+            
+        Returns:
+            Dictionary with location ID and metadata
+        """
+        location_id = str(uuid.uuid4())
+        location = {
+            "id": location_id,
+            **location_data,
+            "created_at": datetime.now(timezone.utc),
+        }
+        self.locations[location_id] = location
+        return location
+    
+    def get_location(self, location_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get location details by ID.
+        
+        Args:
+            location_id: Location identifier
+            
+        Returns:
+            Location data dictionary or None if not found
+        """
+        return self.locations.get(location_id)
+    
+    def list_locations(self) -> List[Dict[str, Any]]:
+        """
+        List all locations.
+        
+        Returns:
+            List of location data dictionaries
+        """
+        return list(self.locations.values())
+    
+    def delete_location(self, location_id: str) -> bool:
+        """
+        Delete a location.
+        
+        Args:
+            location_id: Location identifier
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        if location_id not in self.locations:
+            return False
+        del self.locations[location_id]
+        return True
+    
     def get_simulation_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
         """
         Get simulation logs/events.
@@ -395,92 +266,103 @@ class TinyTroupeAdapter:
         Returns:
             List of log entries
         """
-        # TODO: Implement proper log extraction from TinyWorld
-        # For now, return empty list as TinyTroupe's event system
-        # needs to be properly integrated
-        return []
-    
-    def execute_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
+        communications = getattr(self.world, "_displayed_communications_buffer", [])
+
+        if self._last_log_index < len(communications):
+            new_entries = communications[self._last_log_index :]
+            for communication in new_entries:
+                log_entry = self._convert_communication_to_log(communication)
+                if log_entry is not None:
+                    self._log_history.append(log_entry)
+            self._last_log_index = len(communications)
+
+        if limit is None or limit <= 0:
+            return list(self._log_history)
+
+        return self._log_history[-limit:]
+
+    def _convert_communication_to_log(self, communication: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Execute a manual simulation action.
-        
-        Args:
-            action: Action dictionary with type, agentId, and optional data
-            
-        Returns:
-            Result of the action execution
+        Convert a TinyWorld communication payload into a SimulationLog-compatible dict.
         """
-        action_type = action["type"]
-        agent_id = action["agentId"]
-        
-        # Validate agent exists
-        if agent_id not in self.agents:
-            raise ValueError(f"Agent {agent_id} not found")
-        
-        agent = self.agents[agent_id]
-        
-        # Execute different action types
-        if action_type == "MOVE":
-            location_id = action.get("data", {}).get("location")
-            if location_id and location_id in self.locations:
-                # Store agent location in metadata
-                self.agent_metadata[agent_id]["current_location"] = location_id
-                return {
-                    "id": str(uuid.uuid4()),
-                    "timestamp": datetime.utcnow(),
-                    "agent_id": agent_id,
-                    "action_type": "MOVE",
-                    "content": f"{agent.name} moved to {self.locations[location_id]['name']}",
-                    "metadata": {"location": location_id}
-                }
-        
-        elif action_type == "TALK":
-            message = action.get("data", {}).get("message", "")
-            target_id = action.get("targetId")
-            
-            # Use TinyTroupe's listen/act mechanism
-            if target_id and target_id in self.agents:
-                target = self.agents[target_id]
-                agent.listen(message)
-                return {
-                    "id": str(uuid.uuid4()),
-                    "timestamp": datetime.utcnow(),
-                    "agent_id": agent_id,
-                    "action_type": "TALK",
-                    "content": f"{agent.name} says: {message}",
-                    "metadata": {"target_id": target_id, "message": message}
-                }
+        if not isinstance(communication, dict):
+            return None
+
+        kind = communication.get("kind")
+        content = communication.get("content") or {}
+
+        # Determine timestamp preference order: explicit timestamp -> simulation timestamp -> world's current datetime -> now
+        timestamp = (
+            content.get("timestamp")
+            or content.get("simulation_timestamp")
+            or communication.get("timestamp")
+        )
+
+        if isinstance(timestamp, str):
+            try:
+                timestamp = datetime.fromisoformat(timestamp)
+            except ValueError:
+                timestamp = None
+
+        if not isinstance(timestamp, datetime):
+            world_timestamp = getattr(self.world, "current_datetime", None)
+            timestamp = world_timestamp or datetime.utcnow()
+
+        agent_name = communication.get("source")
+        agent_id = self._agent_name_to_id.get(agent_name)
+
+        action_type = kind or "unknown"
+        content_text = communication.get("rendering") or ""
+
+        if kind == "action":
+            action_data = content.get("action") or {}
+            action_type = action_data.get("type", action_type)
+            content_text = action_data.get("content") or content_text
+        elif kind in ("stimulus", "stimuli"):
+            stimuli_list = []
+            if kind == "stimulus":
+                stimulus = content.get("stimulus")
+                if stimulus:
+                    stimuli_list = [stimulus]
             else:
-                return {
-                    "id": str(uuid.uuid4()),
-                    "timestamp": datetime.utcnow(),
-                    "agent_id": agent_id,
-                    "action_type": "TALK",
-                    "content": f"{agent.name} says: {message}",
-                    "metadata": {"message": message}
-                }
-        
-        elif action_type == "INTERACT":
-            target_id = action.get("targetId")
-            if target_id and target_id in self.agents:
-                target = self.agents[target_id]
-                return {
-                    "id": str(uuid.uuid4()),
-                    "timestamp": datetime.utcnow(),
-                    "agent_id": agent_id,
-                    "action_type": "INTERACT",
-                    "content": f"{agent.name} interacts with {target.name}",
-                    "metadata": {"target_id": target_id}
-                }
-        
-        # Default response for unknown action types
+                stimuli = content.get("stimuli")
+                if isinstance(stimuli, list):
+                    stimuli_list = stimuli
+
+            primary_stimulus = stimuli_list[0] if stimuli_list else {}
+            action_type = primary_stimulus.get("type", action_type)
+            content_text = primary_stimulus.get("content") or content_text
+        elif kind in ("step", "intervention"):
+            content_text = communication.get("rendering") or content_text
+
+        metadata: Dict[str, Any] = {}
+        render_text = communication.get("rendering")
+        if render_text:
+            metadata["rendering"] = render_text
+
+        target = communication.get("target")
+        if target:
+            metadata["target"] = target
+
+        if content:
+            metadata["raw_content"] = content
+
+        if communication.get("source") and communication.get("target"):
+            metadata["source"] = communication["source"]
+
+        if communication.get("kind"):
+            metadata["kind"] = communication["kind"]
+
+        if not metadata:
+            metadata = None
+
         return {
-            "id": str(uuid.uuid4()),
-            "timestamp": datetime.utcnow(),
+            "timestamp": timestamp,
             "agent_id": agent_id,
+            "agent_name": agent_name,
             "action_type": action_type,
-            "content": f"{agent.name} performed action: {action_type}",
-            "metadata": action.get("data", {})
+            "content": content_text,
+            "metadata": metadata,
         }
 
 

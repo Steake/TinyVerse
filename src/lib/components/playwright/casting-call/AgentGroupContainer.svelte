@@ -1,6 +1,5 @@
 <script lang="ts">
-  import type { Agent } from '../../../stores/types';
-  import type { AgentGroup } from '../../../stores/groups';
+  import type { Agent, AgentGroup } from '../../../stores/types';
   import { agentStore } from '../../../stores/agents';
   import AgentCard from './AgentCard.svelte';
   import { createEventDispatcher } from 'svelte';
