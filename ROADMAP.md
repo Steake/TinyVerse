@@ -73,15 +73,23 @@
 **Priority**: Critical  
 **Effort**: High
 
-**Status**: API specification exists but no backend server is implemented
+**Status**: Architecture defined with TinyTroupe integration planned
+
+**Decision**: Use Python + FastAPI + TinyTroupe (Microsoft Research library for LLM-powered agent simulation)
 
 **Action Items**:
-- [ ] Choose backend framework (Node.js/Express, Fastify, or serverless)
+- [ ] Set up Python backend project with FastAPI
+- [ ] Install TinyTroupe library as dependency
 - [ ] Implement REST API endpoints as per API_spec.md
-- [ ] Add data persistence (SQLite, PostgreSQL, or file-based)
+- [ ] Create TinyVerse-to-TinyTroupe adapter layer
+- [ ] Add data persistence (SQLite for dev, PostgreSQL for prod)
 - [ ] Implement CORS and security headers
-- [ ] Add request validation
+- [ ] Add request validation with Pydantic
 - [ ] Add error handling middleware
+- [ ] Set up WebSocket for real-time simulation updates
+- [ ] Configure OpenAI/Azure OpenAI API for TinyTroupe
+
+**Reference**: See [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md) for detailed plan
 
 ---
 
@@ -110,31 +118,45 @@
 ### Phase 2: Backend Implementation (Weeks 3-4)
 
 #### 2.1 API Server Setup
-- [ ] Set up Express/Fastify server
-- [ ] Implement authentication (optional for MVP)
+- [ ] Create Python backend project structure
+- [ ] Set up FastAPI application
+- [ ] Install TinyTroupe as dependency
+- [ ] Configure OpenAI/Azure OpenAI API keys
+- [ ] Implement health check endpoint
 - [ ] Add request logging
 - [ ] Set up development and production configs
+- [ ] Configure CORS for frontend integration
 
 #### 2.2 Core Endpoints
-- [ ] Agent CRUD operations
-- [ ] Location/World CRUD operations
-- [ ] Simulation control endpoints
-- [ ] Simulation logs endpoints
+- [ ] Implement Agent CRUD operations
+- [ ] Create TinyVerse-to-TinyTroupe adapter for agents
+- [ ] Implement Location/World CRUD operations
+- [ ] Create TinyWorld management service
+- [ ] Implement Simulation control endpoints
+- [ ] Add Simulation logs endpoints
+- [ ] Test all endpoints with Postman/curl
 
 #### 2.3 Data Layer
-- [ ] Design database schema
-- [ ] Set up migrations
-- [ ] Implement data access layer
+- [ ] Design database schema (agents, worlds, simulations)
+- [ ] Set up SQLAlchemy models
+- [ ] Implement database migrations
+- [ ] Create data access layer
+- [ ] Add TinyPerson/TinyWorld state serialization
 - [ ] Add seed data for development
+- [ ] Test state persistence and restoration
 
 ### Phase 3: Integration & Testing (Weeks 5-6)
 
 #### 3.1 Frontend-Backend Integration
+- [ ] Update API client base URL configuration
 - [ ] Connect all UI components to real API
 - [ ] Replace mock data with API calls
-- [ ] Add loading states
+- [ ] Add WebSocket client for real-time updates
+- [ ] Add loading states for LLM operations
 - [ ] Add error handling UI
 - [ ] Implement retry logic
+- [ ] Test agent creation flow end-to-end
+- [ ] Test simulation execution with TinyTroupe
 
 #### 3.2 Testing Infrastructure
 - [ ] Set up Vitest for unit tests
@@ -155,19 +177,21 @@
 
 ### 1. Simulation Engine
 **Priority**: High  
-**Effort**: High
+**Effort**: High (Reduced with TinyTroupe)
 
-**Description**: Implement the core simulation logic for agent behavior
+**Description**: Implement core simulation logic using TinyTroupe as the engine
 
 **Action Items**:
-- [ ] Design agent behavior engine
-- [ ] Implement movement and pathfinding
-- [ ] Add agent-to-agent interactions
+- [ ] Integrate TinyTroupe agent behavior system
+- [ ] Implement movement and pathfinding (via TinyWorld)
+- [ ] Add agent-to-agent interactions (TinyPerson.listen_and_act)
 - [ ] Implement time-based routines
 - [ ] Add event-driven behaviors
-- [ ] Create decision-making system (rule-based or ML)
-- [ ] Add memory and context for agents
-- [ ] Implement location-based interactions
+- [ ] Leverage TinyTroupe's LLM-based decision-making
+- [ ] Implement memory and context (built into TinyPerson)
+- [ ] Add location-based interactions in TinyWorld
+- [ ] Configure and optimize GPT-4 prompts
+- [ ] Implement cost monitoring for LLM API calls
 
 ### 2. Advanced Visualizations
 **Priority**: Medium  
@@ -184,16 +208,18 @@
 
 ### 3. Story Generation Enhancement
 **Priority**: Medium  
-**Effort**: High
+**Effort**: Medium (Reduced with TinyTroupe)
 
 **Action Items**:
-- [ ] Integrate with LLM API (OpenAI, Anthropic, local models)
+- [ ] Use TinyTroupe's built-in extraction capabilities
+- [ ] Integrate with additional LLM APIs (OpenAI, Anthropic, local models)
 - [ ] Add template-based story generation
 - [ ] Create story editing interface
 - [ ] Add story export formats (PDF, DOCX, Markdown)
 - [ ] Implement story branching
-- [ ] Add character dialogue generation
+- [ ] Leverage TinyTroupe for character dialogue generation
 - [ ] Create story quality metrics
+- [ ] Add caching to reduce LLM costs
 
 ### 4. Data Import/Export
 **Priority**: Medium  
@@ -242,16 +268,17 @@
 
 ### 2. Advanced AI Integration
 **Priority**: High  
-**Effort**: Very High
+**Effort**: Medium (Reduced with TinyTroupe)
 
 **Action Items**:
-- [ ] Integrate LLM for dynamic agent personalities
+- [ ] Leverage TinyTroupe's built-in LLM integration for dynamic personalities
 - [ ] Add natural language queries for simulation control
-- [ ] Implement AI-driven event generation
+- [ ] Use TinyTroupe's event generation system
 - [ ] Create AI assistant for world building
-- [ ] Add sentiment analysis for interactions
-- [ ] Implement learning agents (reinforcement learning)
-- [ ] Add voice synthesis for agent dialogue
+- [ ] Implement TinyTroupe's validation propositions for behavior monitoring
+- [ ] Explore TinyPerson learning and adaptation features
+- [ ] Add voice synthesis for agent dialogue (future)
+- [ ] Implement cost optimization strategies for LLM usage
 
 ### 3. Marketplace and Templates
 **Priority**: Medium  
