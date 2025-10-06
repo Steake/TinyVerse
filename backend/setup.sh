@@ -95,30 +95,26 @@ echo ""
 
 # Install dependencies
 echo "📦 Installing dependencies..."
+echo ""
 
-# Check if TinyTroupe is already installed (skip check if --force)
-if [ "$FORCE_RECREATE" = true ]; then
-    echo "🔄 Reinstalling all dependencies (--force)"
-    echo "⚠️  Note: This may take 2-3 minutes (TinyTroupe cloned from GitHub)"
-    echo ""
-    pip install -r requirements.txt --force-reinstall
-elif python -c "import tinytroupe" 2>/dev/null; then
-    echo "✓ TinyTroupe already installed, skipping GitHub clone"
-    echo "✓ Installing/updating other dependencies..."
-    echo ""
-    # Install/upgrade everything except TinyTroupe
-    grep -v "git+https://github.com/microsoft/TinyTroupe" requirements.txt > /tmp/requirements_without_tinytroupe.txt
-    pip install -r /tmp/requirements_without_tinytroupe.txt --quiet --upgrade
-    rm /tmp/requirements_without_tinytroupe.txt
+# Install TinyTroupe from local directory (editable mode)
+TINYTROUPE_PATH="tinytroupe-local"
+if [ -d "$TINYTROUPE_PATH" ]; then
+    echo "� Installing TinyTroupe from local clone ($TINYTROUPE_PATH)..."
+    pip install -e "$TINYTROUPE_PATH" --quiet
+    echo "✓ TinyTroupe installed (editable mode)"
 else
-    echo "📥 First-time setup: Installing TinyTroupe from GitHub"
-    echo "⚠️  This will take 2-3 minutes. Subsequent runs will be much faster."
+    echo "❌ Error: TinyTroupe local clone not found at $TINYTROUPE_PATH"
     echo ""
-    echo "Tip: Grab a coffee while this clones and builds..."
-    echo ""
-    pip install -r requirements.txt
+    echo "Run this to clone it:"
+    echo "  git clone --depth 1 https://github.com/microsoft/TinyTroupe.git $TINYTROUPE_PATH"
+    exit 1
 fi
 echo ""
+
+# Install other dependencies
+echo "� Installing other dependencies..."
+pip install -r requirements.txt --quiet
 echo "✓ Dependencies installed"
 echo ""
 

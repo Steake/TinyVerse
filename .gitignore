@@ -68,3 +68,6 @@ backend/.coverage
 backend/*.egg-info/
 backend/dist/
 backend/build/
+
+# TinyTroupe local clone (installed in editable mode)
+backend/tinytroupe-local/
