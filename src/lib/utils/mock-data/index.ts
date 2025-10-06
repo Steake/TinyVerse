@@ -16,13 +16,12 @@ export function initializeMockData(stores: {
     agentStore.addAgent(agent);
   });
 
-  // Initialize world
-  mockLocations.forEach(location => {
-    worldStore.addLocation(location);
-  });
-  mockConnections.forEach(connection => {
-    worldStore.addConnection(connection);
-  });
+  // Initialize world - directly update the store
+  worldStore.update((state: any) => ({
+    ...state,
+    locations: mockLocations,
+    connections: mockConnections
+  }));
 
   // Initialize simulation logs
   mockLogs.forEach(log => {
