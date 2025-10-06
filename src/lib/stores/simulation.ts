@@ -1,6 +1,8 @@
 import { writable } from 'svelte/store';
 import type { SimulationLog } from './types';
 
+export type { SimulationLog } from './types';
+
 interface SimulationState {
   isRunning: boolean;
   currentTime: Date;

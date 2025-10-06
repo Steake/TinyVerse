@@ -123,11 +123,20 @@ export class ApiClient {
     list: async (): Promise<ApiResponse<any[]>> => {
       return this.request<any[]>('GET', '/stories');
     },
+    getStories: async (): Promise<ApiResponse<any[]>> => {
+      return this.request<any[]>('GET', '/stories');
+    },
     get: async (id: string): Promise<ApiResponse<any>> => {
       return this.request<any>('GET', `/stories/${id}`);
     },
     create: async (data: any): Promise<ApiResponse<any>> => {
       return this.request<any>('POST', '/stories', { body: data });
+    },
+    createStory: async (data: any): Promise<ApiResponse<any>> => {
+      return this.request<any>('POST', '/stories', { body: data });
+    },
+    updateStory: async (id: string, data: any): Promise<ApiResponse<any>> => {
+      return this.request<any>('PATCH', `/stories/${id}`, { body: data });
     },
     delete: async (id: string): Promise<ApiResponse<void>> => {
       return this.request<void>('DELETE', `/stories/${id}`);

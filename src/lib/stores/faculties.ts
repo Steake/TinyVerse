@@ -1,6 +1,8 @@
 import { writable } from 'svelte/store';
 import type { MentalFaculty } from './types';
 
+export type { MentalFaculty } from './types';
+
 function createFacultyStore() {
   const { subscribe, set, update } = writable<MentalFaculty[]>([]);
 

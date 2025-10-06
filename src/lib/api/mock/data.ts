@@ -1,4 +1,4 @@
-import type { Agent, Location, Connection, SimulationLog } from '../types';
+import type { Agent, Location, Connection, SimulationLog } from '../../stores/types';
 
 export const mockAgents: Agent[] = [
   {

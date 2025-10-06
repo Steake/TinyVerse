@@ -79,6 +79,7 @@
       class="modal-box relative"
       bind:this={modalContent}
       on:click|stopPropagation
+      role="document"
     >
       <div class="flex justify-between items-center mb-4">
         <h2 id="modal-title" class="font-bold text-lg">{title}</h2>
