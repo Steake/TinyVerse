@@ -23,12 +23,18 @@ fi
 
 # Check for .env file
 if [ ! -f ".env" ]; then
-    echo "⚠️  Warning: .env file not found. Creating from .env.example..."
-    cp .env.example .env
-    echo ""
-    echo "❗ Please edit backend/.env and add your OpenAI API key before running the server."
-    echo "   Then run this script again."
-    exit 1
+    if [ -f ".env.example" ]; then
+        echo "⚠️  Warning: .env file not found. Creating from .env.example..."
+        cp .env.example .env
+        echo ""
+        echo "❗ Please edit backend/.env and add your OpenAI API key before running the server."
+        echo "   Then run this script again."
+        exit 1
+    else
+        echo "❌ Error: .env file not found and .env.example does not exist."
+        echo "   Please create a .env file manually in the backend directory."
+        exit 1
+    fi
 fi
 
 # Start the server
