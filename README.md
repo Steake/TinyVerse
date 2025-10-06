@@ -1,47 +1,158 @@
-# Svelte + TS + Vite
+# TinyVerse Stage
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+> An interactive platform for creating and simulating AI agents in virtual environments
 
-## Recommended IDE Setup
+[![Build Status](https://img.shields.io/badge/build-in%20progress-yellow)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)]()
+[![Svelte](https://img.shields.io/badge/Svelte-4.2-orange)]()
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+## 📚 Documentation
 
-## Need an official Svelte framework?
+- **[Quick Start Guide](./QUICK_START.md)** - Get started in 5 minutes
+- **[Development Roadmap](./ROADMAP.md)** - Comprehensive development plan
+- **[API Specification](./API_spec.md)** - Complete API documentation
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+## 🎭 What is TinyVerse Stage?
 
-## Technical considerations
+TinyVerse Stage is a web-based simulation platform where you can:
 
-**Why use this over SvelteKit?**
+- 🎨 **Design Agents**: Create AI agents with unique personalities, skills, and backstories
+- 🗺️ **Build Worlds**: Construct virtual environments with locations and connections
+- 🎬 **Run Simulations**: Watch agents interact in real-time with intelligent behaviors
+- 📊 **Analyze Results**: Visualize data and extract insights from simulations
+- 📖 **Generate Stories**: Transform simulation events into engaging narratives
 
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
+## 🚀 Quick Start
 
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
+```bash
+# Install dependencies
+npm install
 
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
+# Run development server
+npm run dev
 
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
-
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
-
-**Why include `.vscode/extensions.json`?**
-
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `allowJs` in the TS template?**
-
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
-
-```ts
-// store.ts
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
+# Open browser to http://localhost:5173
 ```
+
+⚠️ **Note**: The project is currently under active development. Build errors are expected as the backend API is being implemented.
+
+## 🏗️ Project Structure
+
+```
+TinyVerse/
+├── src/
+│   ├── App.svelte              # Main application entry
+│   └── lib/
+│       ├── api/                # API client and types
+│       ├── components/         # UI components
+│       │   ├── playwright/     # Design tools
+│       │   ├── grand-stage/    # Simulation viewer
+│       │   ├── critics-corner/ # Analysis tools
+│       │   ├── common/         # Shared components
+│       │   └── layout/         # Layout components
+│       ├── stores/             # State management
+│       └── utils/              # Utility functions
+├── API_spec.md                 # API documentation
+├── ROADMAP.md                  # Development roadmap
+└── QUICK_START.md              # Quick start guide
+```
+
+## ✨ Features
+
+### Playwright's Desk (Design Phase)
+- **World Builder**: Create and manage locations, paths, and environments
+- **Casting Call**: Design agents with rich personalities and relationships
+- **Relationship Network**: Visualize and manage agent interactions with D3.js
+- **Mind Palace**: Organize agent cognitive faculties and memories
+
+### Grand Stage (Simulation Phase)
+- Real-time agent visualization with smooth animations (GSAP)
+- Time controls (play, pause, speed adjustment)
+- Interactive agent tracking and inspection
+- Dynamic environment rendering
+
+### Critic's Corner (Analysis Phase)
+- Data visualization with Chart.js
+- Event log extraction and filtering
+- Story generation from simulation events (AI-powered)
+- Export results in multiple formats
+
+## 🛠️ Technology Stack
+
+- **Frontend**: Svelte 4 + TypeScript
+- **Build Tool**: Vite 5
+- **Styling**: Tailwind CSS + DaisyUI
+- **Visualization**: D3.js, Chart.js, GSAP
+- **Rich Text**: TiptapEditor
+- **Data Processing**: PapaParse, JSZip
+
+## 📋 Current Status
+
+- ✅ UI components completed (~7,500 lines of code)
+- ✅ API specification defined
+- ⚠️ TypeScript compilation issues (62 errors to fix)
+- ⏳ Backend API implementation (in progress)
+- ⏳ Frontend-backend integration (pending)
+- ❌ Simulation engine (not started)
+- ❌ Testing infrastructure (not started)
+
+See [ROADMAP.md](./ROADMAP.md) for detailed status and plans.
+
+## 🎯 Immediate Priorities
+
+1. **Fix Build Issues** - Resolve TypeScript compilation errors
+2. **Implement Backend** - Create REST API server
+3. **Integration** - Connect frontend to backend
+4. **Testing** - Add unit and integration tests
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how to get started:
+
+1. Read the [ROADMAP.md](./ROADMAP.md) to understand project goals
+2. Check existing issues or create a new one
+3. Fork the repository and create a feature branch
+4. Make your changes and test thoroughly
+5. Submit a pull request with a clear description
+
+Priority areas for contribution:
+- Fixing TypeScript errors
+- Implementing backend API
+- Adding tests
+- Improving accessibility
+
+## 📖 Learning Resources
+
+- [Svelte Tutorial](https://svelte.dev/tutorial)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [D3.js Documentation](https://d3js.org/)
+- [Tailwind CSS](https://tailwindcss.com/docs)
+- [DaisyUI Components](https://daisyui.com/components/)
+
+## 🐛 Known Issues
+
+- TypeScript compilation fails (62 errors) - being addressed
+- Backend API not implemented - in progress
+- No tests currently - testing infrastructure planned
+- Some accessibility warnings - improvements planned
+
+See [GitHub Issues](../../issues) for complete list.
+
+## 📄 License
+
+[Add your license here]
+
+## 🙏 Acknowledgments
+
+Built with Svelte, TypeScript, and Vite.
+
+---
+
+**Status**: 🚧 Active Development  
+**Version**: 0.0.0 (Pre-Alpha)  
+**Last Updated**: 2025
+
+For more details, see:
+- [Quick Start Guide](./QUICK_START.md)
+- [Development Roadmap](./ROADMAP.md)
+- [API Documentation](./API_spec.md)
