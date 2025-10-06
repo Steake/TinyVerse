@@ -95,9 +95,29 @@ echo ""
 
 # Install dependencies
 echo "📦 Installing dependencies..."
-echo "⚠️  Note: This may take 2-3 minutes (TinyTroupe is cloned from GitHub)"
-echo ""
-pip install -r requirements.txt
+
+# Check if TinyTroupe is already installed (skip check if --force)
+if [ "$FORCE_RECREATE" = true ]; then
+    echo "🔄 Reinstalling all dependencies (--force)"
+    echo "⚠️  Note: This may take 2-3 minutes (TinyTroupe cloned from GitHub)"
+    echo ""
+    pip install -r requirements.txt --force-reinstall
+elif python -c "import tinytroupe" 2>/dev/null; then
+    echo "✓ TinyTroupe already installed, skipping GitHub clone"
+    echo "✓ Installing/updating other dependencies..."
+    echo ""
+    # Install/upgrade everything except TinyTroupe
+    grep -v "git+https://github.com/microsoft/TinyTroupe" requirements.txt > /tmp/requirements_without_tinytroupe.txt
+    pip install -r /tmp/requirements_without_tinytroupe.txt --quiet --upgrade
+    rm /tmp/requirements_without_tinytroupe.txt
+else
+    echo "📥 First-time setup: Installing TinyTroupe from GitHub"
+    echo "⚠️  This will take 2-3 minutes. Subsequent runs will be much faster."
+    echo ""
+    echo "Tip: Grab a coffee while this clones and builds..."
+    echo ""
+    pip install -r requirements.txt
+fi
 echo ""
 echo "✓ Dependencies installed"
 echo ""
