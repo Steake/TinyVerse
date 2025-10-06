@@ -10,13 +10,18 @@
     "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.node.json",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.0",
     "@sveltejs/vite-plugin-svelte": "^3.1.2",
     "@testing-library/svelte": "^5.2.8",
     "@tsconfig/svelte": "^5.0.4",
     "@types/d3": "^7.4.3",
+    "@types/node": "^24.7.0",
     "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.17",
     "daisyui": "^4.7.2",

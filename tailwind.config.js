@@ -26,6 +26,20 @@ export default {
   daisyui: {
     themes: [
       {
+        dark: {
+          'primary': '#7CB7E3',
+          'secondary': '#9C7E90',
+          'accent': '#3D79C9',
+          'neutral': '#1a1f2e',
+          'base-100': '#0f131a',
+          'base-200': '#1a1f2e',
+          'base-300': '#252b3a',
+          'base-content': '#e4e6eb',
+          'info': '#3ABFF8',
+          'success': '#36D399',
+          'warning': '#FBBD23',
+          'error': '#F87272',
+        },
         light: {
           'primary': '#7CB7E3',
           'secondary': '#9C7E90',
@@ -38,7 +52,7 @@ export default {
         }
       }
     ],
-    darkTheme: 'light',
+    darkTheme: 'dark',
     base: true,
     styled: true,
     utils: true,

@@ -9,6 +9,10 @@
 
 # Testing
 /coverage
+test-artifacts/
+test-results/
+playwright-report/
+playwright/.cache/
 
 # Environment files
 .env
