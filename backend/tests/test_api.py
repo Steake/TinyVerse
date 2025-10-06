@@ -137,6 +137,30 @@ def test_delete_agent():
     assert get_response.status_code == 404
 
 
+def test_update_agent():
+    """Test updating an agent."""
+    # Create an agent first
+    agent_data = {
+        "name": "Original Name",
+        "age": 30,
+        "occupation": "Engineer",
+    }
+    create_response = client.post("/api/agents", json=agent_data)
+    agent_id = create_response.json()["id"]
+    
+    # Update the agent
+    update_data = {
+        "name": "Updated Name",
+        "age": 31
+    }
+    response = client.patch(f"/api/agents/{agent_id}", json=update_data)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Updated Name"
+    assert data["age"] == 31
+    assert data["occupation"] == "Engineer"  # Unchanged
+
+
 def test_get_simulation_state():
     """Test getting simulation state."""
     response = client.get("/api/simulation/state")

@@ -121,6 +121,34 @@ class TinyTroupeAdapter:
         """
         return [self.get_agent(agent_id) for agent_id in self.agents.keys()]
     
+    def update_agent(self, agent_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Update an agent.
+        
+        Args:
+            agent_id: Agent identifier
+            update_data: Dictionary with fields to update
+            
+        Returns:
+            Updated agent or None if not found
+        """
+        if agent_id not in self.agents:
+            return None
+        
+        # Update metadata
+        self.agent_metadata[agent_id].update(update_data)
+        
+        # Update TinyPerson attributes if needed
+        person = self.agents[agent_id]
+        if "name" in update_data:
+            person.name = update_data["name"]
+        if "age" in update_data:
+            person.define("age", update_data["age"])
+        if "occupation" in update_data:
+            person.define("occupation", update_data["occupation"])
+        
+        return self.get_agent(agent_id)
+    
     def delete_agent(self, agent_id: str) -> bool:
         """
         Delete an agent.
