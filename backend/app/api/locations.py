@@ -3,7 +3,6 @@ Location API endpoints.
 """
 from fastapi import APIRouter, HTTPException, status
 from typing import List
-from datetime import datetime
 from app.schemas import Location, LocationCreate
 from app.services import adapter
 import uuid
