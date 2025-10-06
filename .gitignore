@@ -68,3 +68,14 @@ backend/.coverage
 backend/*.egg-info/
 backend/dist/
 backend/build/
+
+# Root-level venv (shouldn't exist but in case someone creates it)
+/venv/
+venv/
+
+# Backup files
+*.bak
+*.bak2
+
+# TinyTroupe local clone (installed in editable mode)
+backend/tinytroupe-local/

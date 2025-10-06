@@ -101,7 +101,7 @@ export class ApiClient {
   }
 
   async getLogs(filters?: LogFilters): Promise<ApiResponse<SimulationLog[]>> {
-    return this.request<SimulationLog[]>('GET', '/simulation/logs', { params: filters });
+    return this.request<SimulationLog[]>('GET', '/simulation/logs', { params: filters as QueryParams });
   }
 
   async getSimulationStatus(): Promise<ApiResponse<{
@@ -110,6 +110,16 @@ export class ApiClient {
     speed: number;
   }>> {
     return this.request('GET', '/simulation/status');
+  }
+
+  async getSimulationState(): Promise<ApiResponse<any>> {
+    // TODO: Implement when backend endpoint exists
+    // return this.request('GET', '/simulation/state');
+    return Promise.resolve({ 
+      success: true, 
+      data: null,
+      message: 'Simulation state endpoint not yet implemented'
+    } as ApiResponse<any>);
   }
 
   // Utility methods

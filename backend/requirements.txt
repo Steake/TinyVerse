@@ -6,7 +6,8 @@ uvicorn[standard]>=0.24.0
 python-multipart>=0.0.6
 
 # TinyTroupe - Agent Simulation Engine
-git+https://github.com/microsoft/TinyTroupe.git@main
+# Installed from local clone via setup.sh (see backend/tinytroupe-local/)
+# To update: cd backend/tinytroupe-local && git pull
 
 # Database
 sqlalchemy>=2.0.0
