@@ -1,5 +1,7 @@
 # TinyVerse Stage - Development Roadmap
 
+> **📋 Issue Tracking**: See [ISSUES.md](./ISSUES.md) for the complete guide to creating and managing GitHub issues for roadmap items.
+
 ## Project Overview
 
 **TinyVerse Stage** is an interactive web application for creating, managing, and simulating AI agents in virtual environments. Built with Svelte, TypeScript, and Vite, it provides a comprehensive platform for designing agent-based simulations with rich visualization and storytelling capabilities.
@@ -455,6 +457,40 @@
 2. Add advanced visualizations
 3. Integrate LLM for story generation
 4. Launch alpha version for testing
+
+---
+
+## Issue Tracking
+
+This roadmap is tracked through GitHub issues for better project management and collaboration.
+
+### Creating Issues
+
+Use the issue templates in `.github/ISSUE_TEMPLATE/`:
+- **Roadmap Task** - For major roadmap items
+- **Bug Report** - For bugs and issues
+- **Feature Request** - For new feature proposals
+
+See [ISSUES.md](./ISSUES.md) for:
+- Complete list of recommended issues to create
+- Label conventions
+- Milestone structure
+- Progress tracking guidelines
+
+### GitHub Actions
+
+Automated workflows in `.github/workflows/`:
+- **CI** - Continuous integration for frontend and backend
+- **Roadmap Tracker** - Weekly progress tracking
+
+### Milestones
+
+- **v0.1.0 - Stabilization** (Weeks 1-2)
+- **v0.2.0 - Backend Foundation** (Weeks 3-4)
+- **v0.3.0 - Integration** (Weeks 5-6)
+- **v0.4.0 - Simulation Engine** (Months 3-4)
+- **v1.0.0 - First Release** (Month 6)
+- **v2.0.0 - Advanced Features** (Months 6-12)
 
 ---
 

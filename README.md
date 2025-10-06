@@ -181,6 +181,23 @@ TinyVerse uses [TinyTroupe](https://github.com/microsoft/TinyTroupe) (Microsoft 
 
 For integration details, see [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md)
 
+## 🗺️ Roadmap & Contributing
+
+TinyVerse is actively being developed. See our roadmap and contribute:
+
+- **[ROADMAP.md](./ROADMAP.md)** - Development roadmap with milestones and priorities
+- **[ISSUES.md](./ISSUES.md)** - Guide to creating and tracking GitHub issues
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - How to contribute to the project
+- **[GitHub Issues](https://github.com/Steake/TinyVerse/issues)** - Report bugs or request features
+- **[GitHub Projects](https://github.com/Steake/TinyVerse/projects)** - View development progress
+
+Key areas for contribution:
+- 🐛 Fixing TypeScript compilation errors
+- ♿ Improving accessibility
+- 🔌 Backend API development
+- 🧪 Writing tests
+- 📚 Documentation improvements
+
 ## 📝 License
 
 This project is open source and available under the MIT License.
