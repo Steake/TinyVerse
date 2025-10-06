@@ -26,6 +26,9 @@ class TinyTroupeAdapter:
         self.world = TinyWorld("TinyVerse Simulation")
         self.simulation_running = False
         self.current_step = 0
+        self._agent_name_to_id: Dict[str, str] = {}
+        self._log_history: List[Dict[str, Any]] = []
+        self._last_log_index = 0
     
     def create_agent(self, agent_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -80,6 +83,7 @@ class TinyTroupeAdapter:
         
         # Add to world
         self.world.add_agent(person)
+        self._agent_name_to_id[agent_data["name"]] = agent_id
         
         return {
             "id": agent_id,
@@ -135,6 +139,7 @@ class TinyTroupeAdapter:
         self.world.remove_agent(person)
         del self.agents[agent_id]
         del self.agent_metadata[agent_id]
+        self._agent_name_to_id.pop(person.name, None)
         return True
     
     def run_simulation(self, steps: int = 1) -> None:
@@ -176,10 +181,104 @@ class TinyTroupeAdapter:
         Returns:
             List of log entries
         """
-        # TODO: Implement proper log extraction from TinyWorld
-        # For now, return empty list as TinyTroupe's event system
-        # needs to be properly integrated
-        return []
+        communications = getattr(self.world, "_displayed_communications_buffer", [])
+
+        if self._last_log_index < len(communications):
+            new_entries = communications[self._last_log_index :]
+            for communication in new_entries:
+                log_entry = self._convert_communication_to_log(communication)
+                if log_entry is not None:
+                    self._log_history.append(log_entry)
+            self._last_log_index = len(communications)
+
+        if limit is None or limit <= 0:
+            return list(self._log_history)
+
+        return self._log_history[-limit:]
+
+    def _convert_communication_to_log(self, communication: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Convert a TinyWorld communication payload into a SimulationLog-compatible dict.
+        """
+        if not isinstance(communication, dict):
+            return None
+
+        kind = communication.get("kind")
+        content = communication.get("content") or {}
+
+        # Determine timestamp preference order: explicit timestamp -> simulation timestamp -> world's current datetime -> now
+        timestamp = (
+            content.get("timestamp")
+            or content.get("simulation_timestamp")
+            or communication.get("timestamp")
+        )
+
+        if isinstance(timestamp, str):
+            try:
+                timestamp = datetime.fromisoformat(timestamp)
+            except ValueError:
+                timestamp = None
+
+        if not isinstance(timestamp, datetime):
+            world_timestamp = getattr(self.world, "current_datetime", None)
+            timestamp = world_timestamp or datetime.utcnow()
+
+        agent_name = communication.get("source")
+        agent_id = self._agent_name_to_id.get(agent_name)
+
+        action_type = kind or "unknown"
+        content_text = communication.get("rendering") or ""
+
+        if kind == "action":
+            action_data = content.get("action") or {}
+            action_type = action_data.get("type", action_type)
+            content_text = action_data.get("content") or content_text
+        elif kind in ("stimulus", "stimuli"):
+            stimuli_list = []
+            if kind == "stimulus":
+                stimulus = content.get("stimulus")
+                if stimulus:
+                    stimuli_list = [stimulus]
+            else:
+                stimuli = content.get("stimuli")
+                if isinstance(stimuli, list):
+                    stimuli_list = stimuli
+
+            primary_stimulus = stimuli_list[0] if stimuli_list else {}
+            action_type = primary_stimulus.get("type", action_type)
+            content_text = primary_stimulus.get("content") or content_text
+        elif kind in ("step", "intervention"):
+            content_text = communication.get("rendering") or content_text
+
+        metadata: Dict[str, Any] = {}
+        render_text = communication.get("rendering")
+        if render_text:
+            metadata["rendering"] = render_text
+
+        target = communication.get("target")
+        if target:
+            metadata["target"] = target
+
+        if content:
+            metadata["raw_content"] = content
+
+        if communication.get("source") and communication.get("target"):
+            metadata["source"] = communication["source"]
+
+        if communication.get("kind"):
+            metadata["kind"] = communication["kind"]
+
+        if not metadata:
+            metadata = None
+
+        return {
+            "timestamp": timestamp,
+            "agent_id": agent_id,
+            "agent_name": agent_name,
+            "action_type": action_type,
+            "content": content_text,
+            "metadata": metadata,
+        }
 
 
 # Global adapter instance
