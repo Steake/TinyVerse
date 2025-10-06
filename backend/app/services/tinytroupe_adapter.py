@@ -5,7 +5,7 @@ This adapter translates between TinyVerse's REST API concepts and TinyTroupe's
 Python API, managing TinyPerson agents and TinyWorld simulations.
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
 from tinytroupe.agent import TinyPerson
 from tinytroupe.environment import TinyWorld
@@ -23,10 +23,14 @@ class TinyTroupeAdapter:
         """Initialize the adapter with empty registries."""
         self.agents: Dict[str, TinyPerson] = {}
         self.agent_metadata: Dict[str, Dict[str, Any]] = {}
+        self.locations: Dict[str, Dict[str, Any]] = {}
+        self.connections: Dict[str, Dict[str, Any]] = {}
         self.world = TinyWorld("TinyVerse Simulation")
         self.simulation_running = False
         self.current_step = 0
-        self.event_log: List[Dict[str, Any]] = []
+        self._agent_name_to_id: Dict[str, str] = {}
+        self._log_history: List[Dict[str, Any]] = []
+        self._last_log_index = 0
     
     def create_agent(self, agent_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -76,17 +80,12 @@ class TinyTroupeAdapter:
             "name": agent_data["name"],
             "age": agent_data["age"],
             "occupation": agent_data["occupation"],
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         }
         
         # Add to world
         self.world.add_agent(person)
-        
-        # Log the event
-        self._log_event("agent_created", {
-            "agent_id": agent_id,
-            "agent_name": agent_data["name"],
-        })
+        self._agent_name_to_id[agent_data["name"]] = agent_id
         
         return {
             "id": agent_id,
@@ -125,6 +124,34 @@ class TinyTroupeAdapter:
         """
         return [self.get_agent(agent_id) for agent_id in self.agents.keys()]
     
+    def update_agent(self, agent_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Update an agent.
+        
+        Args:
+            agent_id: Agent identifier
+            update_data: Dictionary with fields to update
+            
+        Returns:
+            Updated agent or None if not found
+        """
+        if agent_id not in self.agents:
+            return None
+        
+        # Update metadata
+        self.agent_metadata[agent_id].update(update_data)
+        
+        # Update TinyPerson attributes if needed
+        person = self.agents[agent_id]
+        if "name" in update_data:
+            person.name = update_data["name"]
+        if "age" in update_data:
+            person.define("age", update_data["age"])
+        if "occupation" in update_data:
+            person.define("occupation", update_data["occupation"])
+        
+        return self.get_agent(agent_id)
+    
     def delete_agent(self, agent_id: str) -> bool:
         """
         Delete an agent.
@@ -142,12 +169,7 @@ class TinyTroupeAdapter:
         self.world.remove_agent(person)
         del self.agents[agent_id]
         del self.agent_metadata[agent_id]
-        
-        # Log the event
-        self._log_event("agent_deleted", {
-            "agent_id": agent_id,
-        })
-        
+        self._agent_name_to_id.pop(person.name, None)
         return True
     
     def run_simulation(self, steps: int = 1) -> None:
@@ -158,30 +180,12 @@ class TinyTroupeAdapter:
             steps: Number of simulation steps to run
         """
         self.simulation_running = True
-        
-        # Log simulation start
-        self._log_event("simulation_started", {
-            "steps": steps,
-            "starting_step": self.current_step,
-        })
-        
         self.world.run(steps)
         self.current_step += steps
-        
-        # Log simulation completion
-        self._log_event("simulation_step_completed", {
-            "steps_completed": steps,
-            "current_step": self.current_step,
-        })
     
     def pause_simulation(self) -> None:
         """Pause the simulation."""
         self.simulation_running = False
-        
-        # Log simulation pause
-        self._log_event("simulation_paused", {
-            "paused_at_step": self.current_step,
-        })
     
     def get_simulation_state(self) -> Dict[str, Any]:
         """
@@ -197,6 +201,61 @@ class TinyTroupeAdapter:
             "world_name": self.world.name,
         }
     
+    def create_location(self, location_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a location.
+        
+        Args:
+            location_data: Dictionary with location attributes
+            
+        Returns:
+            Dictionary with location ID and metadata
+        """
+        location_id = str(uuid.uuid4())
+        location = {
+            "id": location_id,
+            **location_data,
+            "created_at": datetime.now(timezone.utc),
+        }
+        self.locations[location_id] = location
+        return location
+    
+    def get_location(self, location_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get location details by ID.
+        
+        Args:
+            location_id: Location identifier
+            
+        Returns:
+            Location data dictionary or None if not found
+        """
+        return self.locations.get(location_id)
+    
+    def list_locations(self) -> List[Dict[str, Any]]:
+        """
+        List all locations.
+        
+        Returns:
+            List of location data dictionaries
+        """
+        return list(self.locations.values())
+    
+    def delete_location(self, location_id: str) -> bool:
+        """
+        Delete a location.
+        
+        Args:
+            location_id: Location identifier
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        if location_id not in self.locations:
+            return False
+        del self.locations[location_id]
+        return True
+    
     def get_simulation_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
         """
         Get simulation logs/events.
@@ -207,23 +266,104 @@ class TinyTroupeAdapter:
         Returns:
             List of log entries
         """
-        # Return most recent logs up to limit
-        return self.event_log[-limit:] if self.event_log else []
-    
-    def _log_event(self, event_type: str, data: Dict[str, Any]) -> None:
+        communications = getattr(self.world, "_displayed_communications_buffer", [])
+
+        if self._last_log_index < len(communications):
+            new_entries = communications[self._last_log_index :]
+            for communication in new_entries:
+                log_entry = self._convert_communication_to_log(communication)
+                if log_entry is not None:
+                    self._log_history.append(log_entry)
+            self._last_log_index = len(communications)
+
+        if limit is None or limit <= 0:
+            return list(self._log_history)
+
+        return self._log_history[-limit:]
+
+    def _convert_communication_to_log(self, communication: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Log a simulation event.
-        
-        Args:
-            event_type: Type of event
-            data: Event data
+        Convert a TinyWorld communication payload into a SimulationLog-compatible dict.
         """
-        log_entry = {
-            "type": event_type,
-            "timestamp": datetime.utcnow().isoformat(),
-            "data": data,
+        if not isinstance(communication, dict):
+            return None
+
+        kind = communication.get("kind")
+        content = communication.get("content") or {}
+
+        # Determine timestamp preference order: explicit timestamp -> simulation timestamp -> world's current datetime -> now
+        timestamp = (
+            content.get("timestamp")
+            or content.get("simulation_timestamp")
+            or communication.get("timestamp")
+        )
+
+        if isinstance(timestamp, str):
+            try:
+                timestamp = datetime.fromisoformat(timestamp)
+            except ValueError:
+                timestamp = None
+
+        if not isinstance(timestamp, datetime):
+            world_timestamp = getattr(self.world, "current_datetime", None)
+            timestamp = world_timestamp or datetime.utcnow()
+
+        agent_name = communication.get("source")
+        agent_id = self._agent_name_to_id.get(agent_name)
+
+        action_type = kind or "unknown"
+        content_text = communication.get("rendering") or ""
+
+        if kind == "action":
+            action_data = content.get("action") or {}
+            action_type = action_data.get("type", action_type)
+            content_text = action_data.get("content") or content_text
+        elif kind in ("stimulus", "stimuli"):
+            stimuli_list = []
+            if kind == "stimulus":
+                stimulus = content.get("stimulus")
+                if stimulus:
+                    stimuli_list = [stimulus]
+            else:
+                stimuli = content.get("stimuli")
+                if isinstance(stimuli, list):
+                    stimuli_list = stimuli
+
+            primary_stimulus = stimuli_list[0] if stimuli_list else {}
+            action_type = primary_stimulus.get("type", action_type)
+            content_text = primary_stimulus.get("content") or content_text
+        elif kind in ("step", "intervention"):
+            content_text = communication.get("rendering") or content_text
+
+        metadata: Dict[str, Any] = {}
+        render_text = communication.get("rendering")
+        if render_text:
+            metadata["rendering"] = render_text
+
+        target = communication.get("target")
+        if target:
+            metadata["target"] = target
+
+        if content:
+            metadata["raw_content"] = content
+
+        if communication.get("source") and communication.get("target"):
+            metadata["source"] = communication["source"]
+
+        if communication.get("kind"):
+            metadata["kind"] = communication["kind"]
+
+        if not metadata:
+            metadata = None
+
+        return {
+            "timestamp": timestamp,
+            "agent_id": agent_id,
+            "agent_name": agent_name,
+            "action_type": action_type,
+            "content": content_text,
+            "metadata": metadata,
         }
-        self.event_log.append(log_entry)
 
 
 # Global adapter instance

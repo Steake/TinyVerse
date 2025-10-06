@@ -68,6 +68,22 @@ async def get_agent(agent_id: str):
     return agent
 
 
+@router.patch("/{agent_id}", response_model=Agent)
+async def update_agent(agent_id: str, agent: AgentUpdate):
+    """
+    Update an existing agent.
+    
+    Updates the specified agent with new values.
+    """
+    updated_agent = adapter.update_agent(agent_id, agent.model_dump(exclude_unset=True))
+    if not updated_agent:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent {agent_id} not found"
+        )
+    return updated_agent
+
+
 @router.delete("/{agent_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_agent(agent_id: str):
     """

@@ -3,15 +3,13 @@ Location API endpoints.
 """
 from fastapi import APIRouter, HTTPException, status
 from typing import List
+from datetime import datetime
 from app.schemas import Location, LocationCreate
+from app.services import adapter
+import uuid
 
 
 router = APIRouter(prefix="/locations", tags=["locations"])
-
-
-# In-memory storage for locations (for now)
-# In a full implementation, this would be handled by the TinyTroupe adapter
-locations_storage = {}
 
 
 @router.post("", response_model=Location, status_code=status.HTTP_201_CREATED)
@@ -19,20 +17,10 @@ async def create_location(location: LocationCreate):
     """
     Create a new location.
     
-    Locations represent places in the TinyWorld where agents can interact.
+    Creates a location in the TinyWorld environment.
     """
     try:
-        import uuid
-        from datetime import datetime
-        
-        location_id = str(uuid.uuid4())
-        location_data = {
-            "id": location_id,
-            **location.model_dump(),
-            "created_at": datetime.utcnow(),
-        }
-        locations_storage[location_id] = location_data
-        
+        location_data = adapter.create_location(location.model_dump())
         return location_data
     except Exception as e:
         raise HTTPException(
@@ -46,10 +34,10 @@ async def list_locations():
     """
     List all locations.
     
-    Returns all locations currently in the simulation world.
+    Returns all locations in the simulation.
     """
     try:
-        return list(locations_storage.values())
+        return adapter.list_locations()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -64,12 +52,13 @@ async def get_location(location_id: str):
     
     Returns detailed information about a specific location.
     """
-    if location_id not in locations_storage:
+    location = adapter.get_location(location_id)
+    if not location:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Location {location_id} not found"
         )
-    return locations_storage[location_id]
+    return location
 
 
 @router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -77,12 +66,11 @@ async def delete_location(location_id: str):
     """
     Delete a location.
     
-    Removes the location from the simulation world.
+    Removes the location from the simulation.
     """
-    if location_id not in locations_storage:
+    if not adapter.delete_location(location_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Location {location_id} not found"
         )
-    del locations_storage[location_id]
     return None

@@ -1,65 +1,54 @@
 """
-WebSocket API endpoints for real-time simulation updates.
+WebSocket endpoint for real-time simulation updates.
 """
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from typing import Set
-import json
+from typing import List
 import asyncio
+import json
+from app.services import adapter
 
 
 router = APIRouter(tags=["websocket"])
-
-
-# Store active WebSocket connections
-active_connections: Set[WebSocket] = set()
 
 
 class ConnectionManager:
     """Manages WebSocket connections."""
     
     def __init__(self):
-        self.active_connections: Set[WebSocket] = set()
+        self.active_connections: List[WebSocket] = []
     
     async def connect(self, websocket: WebSocket):
         """Accept a new WebSocket connection."""
         await websocket.accept()
-        self.active_connections.add(websocket)
-        
-        # Send initial connection confirmation
-        await websocket.send_json({
-            "type": "connection_established",
-            "timestamp": asyncio.get_event_loop().time(),
-            "data": {"message": "Connected to TinyVerse simulation"}
-        })
+        self.active_connections.append(websocket)
     
     def disconnect(self, websocket: WebSocket):
         """Remove a WebSocket connection."""
-        self.active_connections.discard(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
     
-    async def broadcast(self, message: dict):
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        """Send a message to a specific client."""
+        await websocket.send_text(message)
+    
+    async def broadcast(self, message: str):
         """Broadcast a message to all connected clients."""
-        disconnected = set()
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except Exception as e:
+                print(f"Error broadcasting to client: {e}")
+    
+    async def broadcast_json(self, message: dict):
+        """Broadcast a JSON message to all connected clients."""
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
             except Exception as e:
-                print(f"Error sending message to client: {e}")
-                disconnected.add(connection)
-        
-        # Remove disconnected clients
-        for connection in disconnected:
-            self.disconnect(connection)
-    
-    async def send_to(self, websocket: WebSocket, message: dict):
-        """Send a message to a specific client."""
-        try:
-            await websocket.send_json(message)
-        except Exception as e:
-            print(f"Error sending message to client: {e}")
-            self.disconnect(websocket)
+                print(f"Error broadcasting to client: {e}")
 
 
-# Global connection manager
+# Create global connection manager
 manager = ConnectionManager()
 
 
@@ -68,39 +57,51 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket endpoint for real-time simulation updates.
     
-    Clients can connect to receive real-time updates about:
-    - Agent actions and interactions
+    Clients can connect to receive:
     - Simulation state changes
-    - New agents or locations created
-    - Simulation step completions
+    - Agent actions and interactions
+    - Simulation events
     """
     await manager.connect(websocket)
     
     try:
+        # Send initial state
+        state = adapter.get_simulation_state()
+        await websocket.send_json({
+            "type": "state",
+            "data": state
+        })
+        
+        # Keep connection alive and send updates
         while True:
-            # Receive messages from client
-            data = await websocket.receive_text()
-            
-            # Parse and handle client messages
             try:
+                # Wait for client messages (could be commands)
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=1.0)
                 message = json.loads(data)
                 
-                # Echo back for now (can be extended for client commands)
-                await manager.send_to(websocket, {
-                    "type": "echo",
-                    "timestamp": asyncio.get_event_loop().time(),
-                    "data": message
+                # Handle client commands
+                if message.get("type") == "ping":
+                    await websocket.send_json({"type": "pong"})
+                
+            except asyncio.TimeoutError:
+                # Send periodic state updates
+                state = adapter.get_simulation_state()
+                await websocket.send_json({
+                    "type": "state",
+                    "data": state
                 })
             except json.JSONDecodeError:
-                await manager.send_to(websocket, {
+                await websocket.send_json({
                     "type": "error",
-                    "timestamp": asyncio.get_event_loop().time(),
-                    "data": {"message": "Invalid JSON"}
+                    "message": "Invalid JSON"
                 })
-    
+                
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-        print("Client disconnected")
+        print(f"Client disconnected")
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        manager.disconnect(websocket)
 
 
 async def broadcast_simulation_event(event_type: str, data: dict):
@@ -116,4 +117,4 @@ async def broadcast_simulation_event(event_type: str, data: dict):
         "timestamp": asyncio.get_event_loop().time(),
         "data": data
     }
-    await manager.broadcast(message)
+    await manager.broadcast_json(message)

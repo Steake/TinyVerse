@@ -7,9 +7,13 @@ from .agent import (
     SkillCreate,
     Location,
     LocationCreate,
+    LocationUpdate,
+    Connection,
+    ConnectionCreate,
     SimulationControl,
     SimulationState,
     SimulationLog,
+    SimulationAction,
     HealthCheck,
 )
 
@@ -21,8 +25,12 @@ __all__ = [
     "SkillCreate",
     "Location",
     "LocationCreate",
+    "LocationUpdate",
+    "Connection",
+    "ConnectionCreate",
     "SimulationControl",
     "SimulationState",
     "SimulationLog",
+    "SimulationAction",
     "HealthCheck",
 ]

@@ -1,5 +1,6 @@
 export interface ApiConfiguration {
   baseUrl: string;
+  wsUrl: string;  // WebSocket URL for real-time updates
   timeout: number;
   retryAttempts: number;
   retryDelay: number;
@@ -12,6 +13,7 @@ export const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8
 
 export const DEFAULT_CONFIG: ApiConfiguration = {
   baseUrl: API_BASE_URL,
+  wsUrl: WS_BASE_URL,
   timeout: 30000,
   retryAttempts: 3,
   retryDelay: 1000,
