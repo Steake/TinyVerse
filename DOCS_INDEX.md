@@ -15,6 +15,8 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to contribute to the project | Contributors | 8 min |
 | [API_spec.md](./API_spec.md) | Complete API specification | Backend developers, API users | 10 min |
 | [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md) | TinyTroupe backend integration plan | Backend developers, architects | 15 min |
+| [DATABASE_INTEGRATION.md](./DATABASE_INTEGRATION.md) | Database models and persistence guide | Backend developers | 10 min |
+| [WEBSOCKET_GUIDE.md](./WEBSOCKET_GUIDE.md) | WebSocket real-time updates guide | Full-stack developers | 8 min |
 | [ISSUE_TINYTROUPE_QA.md](./ISSUE_TINYTROUPE_QA.md) | TinyTroupe integration Q&A | Everyone | 5 min |
 | [.github/README.md](./.github/README.md) | GitHub configuration guide | Maintainers | 5 min |
 | [.github/PROJECT_SETUP.md](./.github/PROJECT_SETUP.md) | GitHub Projects board setup | Maintainers | 10 min |
@@ -42,6 +44,8 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 - **"What's the component structure?"** → Check [ARCHITECTURE.md](./ARCHITECTURE.md) Component Architecture
 - **"What's the tech stack?"** → Review [ARCHITECTURE.md](./ARCHITECTURE.md) Technology Stack
 - **"How to integrate TinyTroupe?"** → Read [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md)
+- **"How does the database work?"** → Check [DATABASE_INTEGRATION.md](./DATABASE_INTEGRATION.md)
+- **"How to use WebSocket?"** → Follow [WEBSOCKET_GUIDE.md](./WEBSOCKET_GUIDE.md)
 
 #### Plan and Prioritize
 - **"What should we work on next?"** → See [ROADMAP.md](./ROADMAP.md) Immediate Priorities
@@ -168,6 +172,30 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 
 **Best For**: Backend developers implementing TinyTroupe integration
 
+### DATABASE_INTEGRATION.md
+**Purpose**: Database models and persistence guide  
+**Key Sections**:
+- Database models overview
+- SQLAlchemy setup
+- Database service layer
+- Usage examples
+- Testing strategies
+- Best practices
+
+**Best For**: Backend developers working with data persistence
+
+### WEBSOCKET_GUIDE.md
+**Purpose**: WebSocket real-time updates guide  
+**Key Sections**:
+- WebSocket connection setup
+- Event types and handling
+- Frontend integration
+- Backend implementation
+- Troubleshooting
+- Best practices
+
+**Best For**: Full-stack developers implementing real-time features
+
 ### .github/README.md
 **Purpose**: GitHub configuration documentation  
 **Key Sections**:
@@ -210,8 +238,11 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 ### For Backend Development
 1. Read [API_spec.md](./API_spec.md) (10 min)
 2. Review [ARCHITECTURE.md](./ARCHITECTURE.md) data flow (5 min)
-3. Check [ROADMAP.md](./ROADMAP.md) backend section (5 min)
-4. **Total**: ~20 minutes to understand requirements
+3. Study [DATABASE_INTEGRATION.md](./DATABASE_INTEGRATION.md) (10 min)
+4. Check [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md) (15 min)
+5. Review [WEBSOCKET_GUIDE.md](./WEBSOCKET_GUIDE.md) (8 min)
+6. Check [ROADMAP.md](./ROADMAP.md) backend section (5 min)
+7. **Total**: ~50 minutes to understand backend requirements
 
 ### For Frontend Development
 1. Follow [QUICK_START.md](./QUICK_START.md) (5 min)
@@ -221,11 +252,11 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 
 ## 📊 Document Statistics
 
-- **Total Documents**: 12 (core + GitHub config)
-- **Total Pages**: ~85 pages (estimated)
-- **Total Words**: ~30,000 words
-- **Total Size**: ~80 KB
-- **Last Updated**: October 2025
+- **Total Documents**: 14 (core + GitHub config)
+- **Total Pages**: ~100 pages (estimated)
+- **Total Words**: ~40,000 words
+- **Total Size**: ~95 KB
+- **Last Updated**: January 2025
 
 ## 🔄 Keeping Documentation Updated
 
