@@ -79,13 +79,21 @@ npm run preview
 
 ## 🛠️ Tech Stack
 
-- **Frontend Framework**: [Svelte](https://svelte.dev/) 4.x
+**Frontend:**
+- **Framework**: [Svelte](https://svelte.dev/) 4.x
 - **Language**: TypeScript
 - **Build Tool**: [Vite](https://vitejs.dev/)
 - **Styling**: [TailwindCSS](https://tailwindcss.com/) + [DaisyUI](https://daisyui.com/)
 - **Visualization**: [D3.js](https://d3js.org/), [Chart.js](https://www.chartjs.org/)
 - **Animation**: [GSAP](https://greensock.com/gsap/)
 - **Rich Text**: [Tiptap](https://tiptap.dev/)
+
+**Backend (Planned):**
+- **Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Python)
+- **Simulation Engine**: [TinyTroupe](https://github.com/microsoft/TinyTroupe) (Microsoft Research)
+- **LLM**: OpenAI GPT-4 / Azure OpenAI
+- **Database**: SQLite (dev) / PostgreSQL (prod)
+- **Real-time**: WebSockets for live updates
 
 ## 📁 Project Structure
 
@@ -162,6 +170,16 @@ See [API_spec.md](./API_spec.md) for detailed API documentation including:
 - World building endpoints
 - Simulation control endpoints
 - Data models and schemas
+
+## 🤖 Backend Integration
+
+TinyVerse uses [TinyTroupe](https://github.com/microsoft/TinyTroupe) (Microsoft Research) as its simulation backend, providing:
+- **LLM-Powered Agents**: Realistic behaviors using GPT-4
+- **Rich Personalities**: Detailed agent specifications
+- **Interactive Environments**: Agent-to-agent interactions
+- **Research-Backed**: Based on published Microsoft Research
+
+For integration details, see [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md)
 
 ## 📝 License
 

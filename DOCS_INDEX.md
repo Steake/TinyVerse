@@ -13,6 +13,8 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and architecture | Developers, architects | 12 min |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to contribute to the project | Contributors | 8 min |
 | [API_spec.md](./API_spec.md) | Complete API specification | Backend developers, API users | 10 min |
+| [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md) | TinyTroupe backend integration plan | Backend developers, architects | 15 min |
+| [ISSUE_TINYTROUPE_QA.md](./ISSUE_TINYTROUPE_QA.md) | TinyTroupe integration Q&A | Everyone | 5 min |
 
 ## 🎯 Quick Navigation
 
@@ -23,6 +25,7 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 - **"Is this project ready to use?"** → Read [EVALUATION.md](./EVALUATION.md) Executive Summary
 - **"What's the vision?"** → See [ROADMAP.md](./ROADMAP.md) Overview section
 - **"How is it built?"** → Check [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **"What is TinyTroupe integration?"** → Quick answers in [ISSUE_TINYTROUPE_QA.md](./ISSUE_TINYTROUPE_QA.md)
 
 #### Get Started Developing
 - **"How do I run this?"** → Follow [QUICK_START.md](./QUICK_START.md)
@@ -35,6 +38,7 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 - **"How does data flow?"** → See [ARCHITECTURE.md](./ARCHITECTURE.md) Data Flow
 - **"What's the component structure?"** → Check [ARCHITECTURE.md](./ARCHITECTURE.md) Component Architecture
 - **"What's the tech stack?"** → Review [ARCHITECTURE.md](./ARCHITECTURE.md) Technology Stack
+- **"How to integrate TinyTroupe?"** → Read [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md)
 
 #### Plan and Prioritize
 - **"What should we work on next?"** → See [ROADMAP.md](./ROADMAP.md) Immediate Priorities
