@@ -246,3 +246,42 @@ def test_delete_location_with_connections():
     connections = client.get("/api/connections").json()
     assert not any(conn["id"] == connection_id for conn in connections)
 
+
+def test_execute_simulation_action():
+    """Test executing a manual simulation action."""
+    # First create an agent
+    agent_data = {
+        "name": "Action Agent",
+        "age": 30,
+        "occupation": "Tester",
+    }
+    agent_response = client.post("/api/agents", json=agent_data)
+    agent_id = agent_response.json()["id"]
+    
+    # Execute a TALK action
+    action_data = {
+        "type": "TALK",
+        "agentId": agent_id,
+        "data": {
+            "message": "Hello, world!"
+        }
+    }
+    response = client.post("/api/simulation/action", json=action_data)
+    assert response.status_code == 200
+    result = response.json()
+    assert "id" in result
+    assert result["agent_id"] == agent_id
+    assert result["action_type"] == "TALK"
+
+
+def test_execute_action_invalid_agent():
+    """Test executing action with invalid agent ID."""
+    action_data = {
+        "type": "TALK",
+        "agentId": "invalid-id",
+        "data": {"message": "Test"}
+    }
+    response = client.post("/api/simulation/action", json=action_data)
+    assert response.status_code == 500
+    assert "not found" in response.json()["detail"].lower()
+

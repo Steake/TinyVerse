@@ -79,3 +79,38 @@ async def get_simulation_logs(limit: int = 100):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get simulation logs: {str(e)}"
         )
+
+
+@router.post("/action")
+async def execute_simulation_action(action: dict):
+    """
+    Execute a manual simulation action.
+    
+    Allows manual intervention in the simulation by executing
+    specific actions for agents.
+    
+    Request body should contain:
+    - type: Action type (MOVE, TALK, INTERACT)
+    - agentId: Agent performing the action
+    - targetId: Optional target agent/location
+    - data: Optional action-specific data
+    """
+    try:
+        # Validate required fields
+        if "type" not in action or "agentId" not in action:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing required fields: type and agentId"
+            )
+        
+        # Execute the action through the adapter
+        result = adapter.execute_action(action)
+        
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute action: {str(e)}"
+        )

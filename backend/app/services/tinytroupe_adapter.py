@@ -399,6 +399,89 @@ class TinyTroupeAdapter:
         # For now, return empty list as TinyTroupe's event system
         # needs to be properly integrated
         return []
+    
+    def execute_action(self, action: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute a manual simulation action.
+        
+        Args:
+            action: Action dictionary with type, agentId, and optional data
+            
+        Returns:
+            Result of the action execution
+        """
+        action_type = action["type"]
+        agent_id = action["agentId"]
+        
+        # Validate agent exists
+        if agent_id not in self.agents:
+            raise ValueError(f"Agent {agent_id} not found")
+        
+        agent = self.agents[agent_id]
+        
+        # Execute different action types
+        if action_type == "MOVE":
+            location_id = action.get("data", {}).get("location")
+            if location_id and location_id in self.locations:
+                # Store agent location in metadata
+                self.agent_metadata[agent_id]["current_location"] = location_id
+                return {
+                    "id": str(uuid.uuid4()),
+                    "timestamp": datetime.utcnow(),
+                    "agent_id": agent_id,
+                    "action_type": "MOVE",
+                    "content": f"{agent.name} moved to {self.locations[location_id]['name']}",
+                    "metadata": {"location": location_id}
+                }
+        
+        elif action_type == "TALK":
+            message = action.get("data", {}).get("message", "")
+            target_id = action.get("targetId")
+            
+            # Use TinyTroupe's listen/act mechanism
+            if target_id and target_id in self.agents:
+                target = self.agents[target_id]
+                agent.listen(message)
+                return {
+                    "id": str(uuid.uuid4()),
+                    "timestamp": datetime.utcnow(),
+                    "agent_id": agent_id,
+                    "action_type": "TALK",
+                    "content": f"{agent.name} says: {message}",
+                    "metadata": {"target_id": target_id, "message": message}
+                }
+            else:
+                return {
+                    "id": str(uuid.uuid4()),
+                    "timestamp": datetime.utcnow(),
+                    "agent_id": agent_id,
+                    "action_type": "TALK",
+                    "content": f"{agent.name} says: {message}",
+                    "metadata": {"message": message}
+                }
+        
+        elif action_type == "INTERACT":
+            target_id = action.get("targetId")
+            if target_id and target_id in self.agents:
+                target = self.agents[target_id]
+                return {
+                    "id": str(uuid.uuid4()),
+                    "timestamp": datetime.utcnow(),
+                    "agent_id": agent_id,
+                    "action_type": "INTERACT",
+                    "content": f"{agent.name} interacts with {target.name}",
+                    "metadata": {"target_id": target_id}
+                }
+        
+        # Default response for unknown action types
+        return {
+            "id": str(uuid.uuid4()),
+            "timestamp": datetime.utcnow(),
+            "agent_id": agent_id,
+            "action_type": action_type,
+            "content": f"{agent.name} performed action: {action_type}",
+            "metadata": action.get("data", {})
+        }
 
 
 # Global adapter instance
