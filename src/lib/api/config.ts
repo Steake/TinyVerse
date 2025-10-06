@@ -1,5 +1,6 @@
 export interface ApiConfiguration {
   baseUrl: string;
+  wsUrl: string;  // WebSocket URL for real-time updates
   timeout: number;
   retryAttempts: number;
   retryDelay: number;
@@ -7,7 +8,8 @@ export interface ApiConfiguration {
 }
 
 export const DEFAULT_CONFIG: ApiConfiguration = {
-  baseUrl: 'http://localhost:5000/api/', // Updated to point to our Flask API on the new port
+  baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  wsUrl: import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000/ws',
   timeout: 30000,
   retryAttempts: 3,
   retryDelay: 1000,

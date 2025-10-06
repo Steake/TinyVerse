@@ -1,2 +1,4 @@
+# Test files (except in tests/ directory)
 test_*.py
+!tests/test_*.py
 start_server.py

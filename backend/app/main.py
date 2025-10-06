@@ -7,7 +7,7 @@ TinyTroupe for AI agent simulation.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api import agents_router, simulation_router
+from app.api import agents_router, simulation_router, locations_router, websocket_router, world_router
 from app.api.config import router as config_router
 from app.schemas import HealthCheck
 
@@ -33,12 +33,24 @@ app.add_middleware(
 # Include routers
 app.include_router(agents_router, prefix="/api")
 app.include_router(simulation_router, prefix="/api")
+app.include_router(locations_router, prefix="/api")
+app.include_router(world_router, prefix="/api")
 app.include_router(config_router, prefix="/api")
+app.include_router(websocket_router)  # WebSocket routes don't need /api prefix
 
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize custom OpenAI client on startup."""
+    """Initialize custom OpenAI client and database on startup."""
+    # Initialize database
+    try:
+        from app.database import init_db
+        init_db()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"Warning: Could not initialize database: {e}")
+    
+    # Setup custom OpenAI client
     try:
         from app.services.custom_openai_client import setup_custom_openai_client
         

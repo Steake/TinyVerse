@@ -1,31 +1,36 @@
 #!/bin/bash
 # TinyVerse Backend Startup Script
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 echo "🚀 Starting TinyVerse Backend..."
+echo "📍 Working directory: $(pwd)"
 echo ""
 
-# Check if virtual environment exists
-if [ ! -d "venv" ]; then
-    echo "📦 Creating virtual environment..."
-    python3 -m venv venv
+# Check if virtual environment exists in backend/
+if [ ! -d "$SCRIPT_DIR/venv" ]; then
+    echo "📦 Creating virtual environment in backend/venv..."
+    python3 -m venv "$SCRIPT_DIR/venv"
 fi
 
 # Activate virtual environment
 echo "🔧 Activating virtual environment..."
-source venv/bin/activate
+source "$SCRIPT_DIR/venv/bin/activate"
 
 # Install dependencies if needed
-if [ ! -f "venv/.installed" ]; then
+if [ ! -f "$SCRIPT_DIR/venv/.installed" ]; then
     echo "📥 Installing dependencies..."
-    pip install -r requirements.txt
-    touch venv/.installed
+    pip install -r "$SCRIPT_DIR/requirements.txt"
+    touch "$SCRIPT_DIR/venv/.installed"
 fi
 
 # Check for .env file
-if [ ! -f ".env" ]; then
-    if [ -f ".env.example" ]; then
+if [ ! -f "$SCRIPT_DIR/.env" ]; then
+    if [ -f "$SCRIPT_DIR/.env.example" ]; then
         echo "⚠️  Warning: .env file not found. Creating from .env.example..."
-        cp .env.example .env
+        cp "$SCRIPT_DIR/.env.example" "$SCRIPT_DIR/.env"
         echo ""
         echo "❗ Please edit backend/.env and add your OpenAI API key before running the server."
         echo "   Then run this script again."
