@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, status
 from typing import List
 from app.schemas import Agent, AgentCreate, AgentUpdate
 from app.services import adapter
+from app.api.websocket import broadcast_simulation_event
 
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -19,6 +20,13 @@ async def create_agent(agent: AgentCreate):
     """
     try:
         agent_data = adapter.create_agent(agent.model_dump())
+        
+        # Broadcast event to WebSocket clients
+        await broadcast_simulation_event("agent_created", {
+            "agent_id": agent_data["id"],
+            "agent_name": agent_data["name"]
+        })
+        
         return agent_data
     except Exception as e:
         raise HTTPException(
@@ -88,4 +96,10 @@ async def delete_agent(agent_id: str):
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Agent {agent_id} not found"
         )
+    
+    # Broadcast event to WebSocket clients
+    await broadcast_simulation_event("agent_deleted", {
+        "agent_id": agent_id
+    })
+    
     return None

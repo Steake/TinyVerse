@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, status
 from typing import List
 from app.schemas import SimulationControl, SimulationState, SimulationLog, SimulationAction
 from app.services import adapter
+from app.api.websocket import broadcast_simulation_event
 
 
 router = APIRouter(prefix="/simulation", tags=["simulation"])
@@ -20,18 +21,44 @@ async def control_simulation(control: SimulationControl):
     try:
         if control.action == "start":
             adapter.run_simulation(control.steps or 1)
+            
+            # Broadcast event to WebSocket clients
+            await broadcast_simulation_event("simulation_started", {
+                "action": "start",
+                "steps": control.steps or 1
+            })
+            
             return {"message": f"Simulation started for {control.steps} steps"}
         
         elif control.action == "pause":
             adapter.pause_simulation()
+            
+            # Broadcast event to WebSocket clients
+            await broadcast_simulation_event("simulation_paused", {
+                "action": "pause"
+            })
+            
             return {"message": "Simulation paused"}
         
         elif control.action == "stop":
             adapter.pause_simulation()
+            
+            # Broadcast event to WebSocket clients
+            await broadcast_simulation_event("simulation_stopped", {
+                "action": "stop"
+            })
+            
             return {"message": "Simulation stopped"}
         
         elif control.action == "step":
             adapter.run_simulation(1)
+            
+            # Broadcast event to WebSocket clients
+            await broadcast_simulation_event("simulation_step", {
+                "action": "step",
+                "current_step": adapter.current_step
+            })
+            
             return {"message": "Simulation advanced 1 step"}
         
         else:

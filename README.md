@@ -2,6 +2,14 @@
 
 TinyVerse is a powerful simulation platform for creating and managing AI agent scenarios. Design virtual worlds, craft detailed agent personalities, establish complex relationships, and watch your simulations come to life.
 
+**NEW: Full TinyTroupe Integration** 🎉
+- Real-time WebSocket updates for live simulation events
+- Comprehensive event logging system
+- REST API for agents, locations, and simulation control
+- End-to-end tested integration with Microsoft Research's TinyTroupe
+
+📚 **Quick Start**: See [QUICKSTART_INTEGRATION.md](./QUICKSTART_INTEGRATION.md) for a 5-minute setup guide!
+
 ## ✨ Features
 
 ### 🎭 Playwright's Desk
@@ -238,6 +246,53 @@ TinyVerse uses [TinyTroupe](https://github.com/microsoft/TinyTroupe) (Microsoft 
 - **Rich Personalities**: Detailed agent specifications
 - **Interactive Environments**: Agent-to-agent interactions
 - **Research-Backed**: Based on published Microsoft Research
+
+### Integration Features
+
+✅ **REST API**
+- Full CRUD operations for agents and locations
+- Simulation control (start, pause, stop, step)
+- Real-time state monitoring
+- Event history and logging
+
+✅ **WebSocket Support**
+- Real-time simulation updates
+- Live event broadcasting
+- Automatic reconnection
+- Connection state management
+
+✅ **Event Logging**
+- Track all simulation activities
+- Agent lifecycle events
+- Simulation state changes
+- Structured event data
+
+✅ **Testing**
+- Comprehensive unit tests
+- Integration test suite
+- End-to-end scenarios
+- Demo script included
+
+### Documentation
+
+- **[QUICKSTART_INTEGRATION.md](./QUICKSTART_INTEGRATION.md)** - 5-minute quick start guide
+- **[INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md)** - Comprehensive setup and usage
+- **[TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md)** - Architecture and design details
+- **[QUICKREF_TINYTROUPE.md](./QUICKREF_TINYTROUPE.md)** - Quick reference and links
+
+### Testing the Integration
+
+```bash
+# Run all backend tests
+cd backend
+pytest tests/ -v
+
+# Run the integration demo
+python demo_integration.py
+
+# View API documentation
+# Start the backend, then visit http://localhost:8000/docs
+```
 
 For integration details, see [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md)
 

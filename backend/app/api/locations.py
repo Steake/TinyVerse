@@ -19,13 +19,8 @@ async def create_location(location: LocationCreate):
     Creates a location in the TinyWorld environment.
     """
     try:
-        location_data = location.model_dump()
-        location_data["id"] = str(uuid.uuid4())
-        
-        # For now, just store in adapter (TinyWorld doesn't have explicit locations)
-        # This can be enhanced to use database persistence
-        
-        return Location(**location_data, created_at=datetime.utcnow())
+        location_data = adapter.create_location(location.model_dump())
+        return location_data
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -41,9 +36,7 @@ async def list_locations():
     Returns all locations in the simulation.
     """
     try:
-        # For now, return empty list
-        # This can be enhanced to query from database
-        return []
+        return adapter.list_locations()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -58,10 +51,13 @@ async def get_location(location_id: str):
     
     Returns detailed information about a specific location.
     """
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Location {location_id} not found"
-    )
+    location = adapter.get_location(location_id)
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location {location_id} not found"
+        )
+    return location
 
 
 @router.delete("/{location_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -71,11 +67,9 @@ async def delete_location(location_id: str):
     
     Removes the location from the simulation.
     """
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Location {location_id} not found"
-    )
-
-
-# Import datetime at the top
-from datetime import datetime
+    if not adapter.delete_location(location_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location {location_id} not found"
+        )
+    return None

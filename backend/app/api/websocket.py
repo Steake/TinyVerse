@@ -38,6 +38,14 @@ class ConnectionManager:
                 await connection.send_text(message)
             except Exception as e:
                 print(f"Error broadcasting to client: {e}")
+    
+    async def broadcast_json(self, message: dict):
+        """Broadcast a JSON message to all connected clients."""
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                print(f"Error broadcasting to client: {e}")
 
 
 # Create global connection manager
@@ -96,15 +104,17 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-async def broadcast_simulation_event(event: dict):
+async def broadcast_simulation_event(event_type: str, data: dict):
     """
     Broadcast a simulation event to all connected clients.
     
     Args:
-        event: Event data to broadcast
+        event_type: Type of event (agent_action, simulation_step, etc.)
+        data: Event data
     """
-    message = json.dumps({
-        "type": "event",
-        "data": event
-    })
-    await manager.broadcast(message)
+    message = {
+        "type": event_type,
+        "timestamp": asyncio.get_event_loop().time(),
+        "data": data
+    }
+    await manager.broadcast_json(message)

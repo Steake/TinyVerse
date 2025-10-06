@@ -201,6 +201,61 @@ class TinyTroupeAdapter:
             "world_name": self.world.name,
         }
     
+    def create_location(self, location_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a location.
+        
+        Args:
+            location_data: Dictionary with location attributes
+            
+        Returns:
+            Dictionary with location ID and metadata
+        """
+        location_id = str(uuid.uuid4())
+        location = {
+            "id": location_id,
+            **location_data,
+            "created_at": datetime.now(timezone.utc),
+        }
+        self.locations[location_id] = location
+        return location
+    
+    def get_location(self, location_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get location details by ID.
+        
+        Args:
+            location_id: Location identifier
+            
+        Returns:
+            Location data dictionary or None if not found
+        """
+        return self.locations.get(location_id)
+    
+    def list_locations(self) -> List[Dict[str, Any]]:
+        """
+        List all locations.
+        
+        Returns:
+            List of location data dictionaries
+        """
+        return list(self.locations.values())
+    
+    def delete_location(self, location_id: str) -> bool:
+        """
+        Delete a location.
+        
+        Args:
+            location_id: Location identifier
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        if location_id not in self.locations:
+            return False
+        del self.locations[location_id]
+        return True
+    
     def get_simulation_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
         """
         Get simulation logs/events.
