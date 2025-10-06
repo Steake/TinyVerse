@@ -1,168 +1,176 @@
-# TinyVerse Stage
+# TinyVerse 🎭
 
-> An interactive platform for creating and simulating AI agents in virtual environments
+TinyVerse is a powerful simulation platform for creating and managing AI agent scenarios. Design virtual worlds, craft detailed agent personalities, establish complex relationships, and watch your simulations come to life.
 
-[![Build Status](https://img.shields.io/badge/build-in%20progress-yellow)]()
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)]()
-[![Svelte](https://img.shields.io/badge/Svelte-4.2-orange)]()
+## ✨ Features
 
-## 📚 Documentation
+### 🎭 Playwright's Desk
+The creative workspace where you build your simulation world:
 
-> **New?** Start with the [Documentation Index](./DOCS_INDEX.md) to find what you need!
+- **World Builder**: Design locations, create connections, and build immersive environments
+- **Casting Call**: Create and manage AI agents with detailed profiles including:
+  - Demographics (age, occupation, nationality)
+  - Personality traits and interests
+  - Skills and expertise levels
+  - Daily routines and schedules
+  - Group assignments
+- **Relationship Network**: Visualize and edit agent relationships with an interactive network graph
+- **Mind Palace**: Configure mental faculties and cognitive parameters for agents
 
-- **[Documentation Index](./DOCS_INDEX.md)** - Navigation guide for all docs
-- **[Repository Evaluation](./EVALUATION.md)** - Comprehensive project assessment
-- **[Quick Start Guide](./QUICK_START.md)** - Get started in 5 minutes
-- **[Development Roadmap](./ROADMAP.md)** - Detailed development plan
-- **[Architecture Guide](./ARCHITECTURE.md)** - System architecture and design
-- **[Contributing Guide](./CONTRIBUTING.md)** - How to contribute
-- **[API Specification](./API_spec.md)** - Complete API documentation
+### 🎬 Grand Stage
+Watch your simulation unfold in real-time:
 
-## 🎭 What is TinyVerse Stage?
+- **Live Simulation**: Observe agents as they move, interact, and communicate
+- **Simulation Controls**: Start, pause, and control simulation speed
+- **Agent Tracking**: Follow individual agents through their daily activities
+- **Visual Environment**: See your designed world with agents positioned in real-time
+- **Speech Bubbles**: View agent conversations and thoughts
 
-TinyVerse Stage is a web-based simulation platform where you can:
+### 📊 Critic's Corner
+Analyze and extract insights from your simulations:
 
-- 🎨 **Design Agents**: Create AI agents with unique personalities, skills, and backstories
-- 🗺️ **Build Worlds**: Construct virtual environments with locations and connections
-- 🎬 **Run Simulations**: Watch agents interact in real-time with intelligent behaviors
-- 📊 **Analyze Results**: Visualize data and extract insights from simulations
-- 📖 **Generate Stories**: Transform simulation events into engaging narratives
+- **Data Visualizer**: Generate charts and graphs from simulation data
+- **Story Generator**: Create narrative stories from simulation logs with customizable styles:
+  - Descriptive narratives
+  - Dramatic storytelling
+  - Humorous tales
+- **Results Extractor**: Export simulation data in various formats (CSV, JSON)
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
+### Prerequisites
+
+- Node.js (v16 or higher)
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
 ```bash
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-
-# Open browser to http://localhost:5173
+git clone https://github.com/Steake/TinyVerse.git
+cd TinyVerse
 ```
 
-⚠️ **Note**: The project is currently under active development. Build errors are expected as the backend API is being implemented.
+2. Install dependencies:
+```bash
+npm install
+```
 
-## 🏗️ Project Structure
+3. Start the development server:
+```bash
+npm run dev
+```
+
+4. Open your browser and navigate to `http://localhost:5173`
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+The built files will be in the `dist` directory.
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+## 🛠️ Tech Stack
+
+- **Frontend Framework**: [Svelte](https://svelte.dev/) 4.x
+- **Language**: TypeScript
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **Styling**: [TailwindCSS](https://tailwindcss.com/) + [DaisyUI](https://daisyui.com/)
+- **Visualization**: [D3.js](https://d3js.org/), [Chart.js](https://www.chartjs.org/)
+- **Animation**: [GSAP](https://greensock.com/gsap/)
+- **Rich Text**: [Tiptap](https://tiptap.dev/)
+
+## 📁 Project Structure
 
 ```
 TinyVerse/
 ├── src/
-│   ├── App.svelte              # Main application entry
-│   └── lib/
-│       ├── api/                # API client and types
-│       ├── components/         # UI components
-│       │   ├── playwright/     # Design tools
-│       │   ├── grand-stage/    # Simulation viewer
-│       │   ├── critics-corner/ # Analysis tools
-│       │   ├── common/         # Shared components
-│       │   └── layout/         # Layout components
-│       ├── stores/             # State management
-│       └── utils/              # Utility functions
-├── API_spec.md                 # API documentation
-├── ROADMAP.md                  # Development roadmap
-└── QUICK_START.md              # Quick start guide
+│   ├── lib/
+│   │   ├── components/
+│   │   │   ├── playwright/      # World & agent creation
+│   │   │   ├── grand-stage/     # Simulation runtime
+│   │   │   ├── critics-corner/  # Analysis & export
+│   │   │   ├── layout/          # App layout
+│   │   │   └── common/          # Shared components
+│   │   ├── stores/              # Svelte stores for state
+│   │   ├── api/                 # API client
+│   │   └── utils/               # Utilities & mock data
+│   ├── App.svelte               # Main application
+│   └── main.ts                  # Entry point
+├── public/                      # Static assets
+├── API_spec.md                  # API specification
+└── package.json
 ```
 
-## ✨ Features
+## 📖 Usage
 
-### Playwright's Desk (Design Phase)
-- **World Builder**: Create and manage locations, paths, and environments
-- **Casting Call**: Design agents with rich personalities and relationships
-- **Relationship Network**: Visualize and manage agent interactions with D3.js
-- **Mind Palace**: Organize agent cognitive faculties and memories
+### Creating Your First Simulation
 
-### Grand Stage (Simulation Phase)
-- Real-time agent visualization with smooth animations (GSAP)
-- Time controls (play, pause, speed adjustment)
-- Interactive agent tracking and inspection
-- Dynamic environment rendering
+1. **Design Your World** (Playwright's Desk → World Builder)
+   - Add locations (rooms, outdoor spaces, special areas)
+   - Connect locations with paths, doors, or portals
+   - Position elements on the canvas
 
-### Critic's Corner (Analysis Phase)
-- Data visualization with Chart.js
-- Event log extraction and filtering
-- Story generation from simulation events (AI-powered)
-- Export results in multiple formats
+2. **Create Agents** (Playwright's Desk → Casting Call)
+   - Define agent profiles with detailed characteristics
+   - Set personality traits and interests
+   - Assign skills and expertise
+   - Create daily routines
 
-## 🛠️ Technology Stack
+3. **Establish Relationships** (Playwright's Desk → Relationship Network)
+   - Connect agents as friends, colleagues, family, or rivals
+   - Set relationship strength and descriptions
+   - Visualize the social network
 
-- **Frontend**: Svelte 4 + TypeScript
-- **Build Tool**: Vite 5
-- **Styling**: Tailwind CSS + DaisyUI
-- **Visualization**: D3.js, Chart.js, GSAP
-- **Rich Text**: TiptapEditor
-- **Data Processing**: PapaParse, JSZip
+4. **Run Simulation** (Grand Stage)
+   - Start the simulation
+   - Observe agent behaviors and interactions
+   - Monitor conversations and movements
 
-## 📋 Current Status
+5. **Analyze Results** (Critic's Corner)
+   - Generate visualizations
+   - Create narrative stories
+   - Export data for further analysis
 
-- ✅ UI components completed (~7,500 lines of code)
-- ✅ API specification defined
-- ⚠️ TypeScript compilation issues (62 errors to fix)
-- ⏳ Backend API implementation (in progress)
-- ⏳ Frontend-backend integration (pending)
-- ❌ Simulation engine (not started)
-- ❌ Testing infrastructure (not started)
+## 🔧 Development
 
-See [ROADMAP.md](./ROADMAP.md) for detailed status and plans.
+### Type Checking
 
-## 🎯 Immediate Priorities
+```bash
+npm run check
+```
 
-1. **Fix Build Issues** - Resolve TypeScript compilation errors
-2. **Implement Backend** - Create REST API server
-3. **Integration** - Connect frontend to backend
-4. **Testing** - Add unit and integration tests
+### Code Style
+
+This project uses TypeScript strict mode and follows Svelte best practices.
 
 ## 🤝 Contributing
 
-We welcome contributions! Here's how to get started:
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-1. Read the [ROADMAP.md](./ROADMAP.md) to understand project goals
-2. Check existing issues or create a new one
-3. Fork the repository and create a feature branch
-4. Make your changes and test thoroughly
-5. Submit a pull request with a clear description
+## 📄 API Documentation
 
-Priority areas for contribution:
-- Fixing TypeScript errors
-- Implementing backend API
-- Adding tests
-- Improving accessibility
+See [API_spec.md](./API_spec.md) for detailed API documentation including:
+- Agent management endpoints
+- World building endpoints
+- Simulation control endpoints
+- Data models and schemas
 
-## 📖 Learning Resources
+## 📝 License
 
-- [Svelte Tutorial](https://svelte.dev/tutorial)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-- [D3.js Documentation](https://d3js.org/)
-- [Tailwind CSS](https://tailwindcss.com/docs)
-- [DaisyUI Components](https://daisyui.com/components/)
-
-## 🐛 Known Issues
-
-- TypeScript compilation fails (62 errors) - being addressed
-- Backend API not implemented - in progress
-- No tests currently - testing infrastructure planned
-- Some accessibility warnings - improvements planned
-
-See [GitHub Issues](../../issues) for complete list.
-
-## 📄 License
-
-[Add your license here]
+This project is open source and available under the MIT License.
 
 ## 🙏 Acknowledgments
 
-Built with Svelte, TypeScript, and Vite.
+Built with Svelte, powered by Vite, and styled with TailwindCSS and DaisyUI.
 
 ---
 
-**Status**: 🚧 Active Development  
-**Version**: 0.0.0 (Pre-Alpha)  
-**Last Updated**: 2025
-
-For more details, see:
-- [Documentation Index](./DOCS_INDEX.md) - Find what you need
-- [Repository Evaluation](./EVALUATION.md) - Project assessment
-- [Quick Start Guide](./QUICK_START.md) - Get started quickly
-- [Development Roadmap](./ROADMAP.md) - Development plan
-- [Architecture Guide](./ARCHITECTURE.md) - System design
-- [Contributing Guide](./CONTRIBUTING.md) - Contribution guidelines
-- [API Documentation](./API_spec.md) - API specification
+**Note**: This is an experimental platform for AI agent simulation research and creative storytelling.
