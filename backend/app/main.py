@@ -38,7 +38,16 @@ app.include_router(config_router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize custom OpenAI client on startup."""
+    """Initialize database and custom OpenAI client on startup."""
+    # Initialize database
+    try:
+        from app.database import init_db
+        init_db()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"Warning: Could not initialize database: {e}")
+    
+    # Initialize custom OpenAI client
     try:
         from app.services.custom_openai_client import setup_custom_openai_client
         

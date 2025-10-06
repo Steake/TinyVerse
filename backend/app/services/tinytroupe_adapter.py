@@ -3,12 +3,18 @@ TinyTroupe Adapter - Bridges TinyVerse API with TinyTroupe library.
 
 This adapter translates between TinyVerse's REST API concepts and TinyTroupe's
 Python API, managing TinyPerson agents and TinyWorld simulations.
+
+Now with database persistence support.
 """
 import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from tinytroupe.agent import TinyPerson
 from tinytroupe.environment import TinyWorld
+from sqlalchemy.orm import Session
+from app.database import get_db_context
+from app.models.agent import Agent as AgentModel, Skill as SkillModel
+from app.models.simulation import SimulationLog as SimulationLogModel
 
 
 class TinyTroupeAdapter:
@@ -29,7 +35,7 @@ class TinyTroupeAdapter:
     
     def create_agent(self, agent_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Create a TinyPerson from TinyVerse agent data.
+        Create a TinyPerson from TinyVerse agent data and persist to database.
         
         Args:
             agent_data: Dictionary with agent attributes
@@ -68,7 +74,7 @@ class TinyTroupeAdapter:
         if agent_data.get("backstory"):
             person.define("backstory", agent_data["backstory"])
         
-        # Store agent and metadata
+        # Store agent in memory
         self.agents[agent_id] = person
         self.agent_metadata[agent_id] = {
             "id": agent_id,
@@ -81,6 +87,35 @@ class TinyTroupeAdapter:
         # Add to world
         self.world.add_agent(person)
         
+        # Persist to database
+        with get_db_context() as db:
+            db_agent = AgentModel(
+                id=agent_id,
+                name=agent_data["name"],
+                age=agent_data["age"],
+                occupation=agent_data["occupation"],
+                occupation_description=agent_data.get("occupation_description"),
+                nationality=agent_data.get("nationality"),
+                country_of_residence=agent_data.get("country_of_residence"),
+                personality_traits=agent_data.get("personality_traits", []),
+                professional_interests=agent_data.get("professional_interests", []),
+                personal_interests=agent_data.get("personal_interests", []),
+                backstory=agent_data.get("backstory"),
+            )
+            db.add(db_agent)
+            
+            # Add skills
+            for skill_data in agent_data.get("skills", []):
+                db_skill = SkillModel(
+                    agent_id=agent_id,
+                    name=skill_data["name"],
+                    level=skill_data["level"]
+                )
+                db.add(db_skill)
+            
+            db.commit()
+            db.refresh(db_agent)
+        
         return {
             "id": agent_id,
             **agent_data,
@@ -89,7 +124,7 @@ class TinyTroupeAdapter:
     
     def get_agent(self, agent_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get agent details by ID.
+        Get agent details by ID from database.
         
         Args:
             agent_id: Agent identifier
@@ -97,30 +132,68 @@ class TinyTroupeAdapter:
         Returns:
             Agent data dictionary or None if not found
         """
-        if agent_id not in self.agents:
-            return None
-        
-        person = self.agents[agent_id]
-        metadata = self.agent_metadata[agent_id]
-        
-        return {
-            "id": agent_id,
-            "name": person.name,
-            **metadata,
-        }
+        with get_db_context() as db:
+            db_agent = db.query(AgentModel).filter(AgentModel.id == agent_id).first()
+            if not db_agent:
+                return None
+            
+            # Get skills
+            skills = [
+                {"name": skill.name, "level": skill.level}
+                for skill in db_agent.skills
+            ]
+            
+            return {
+                "id": db_agent.id,
+                "name": db_agent.name,
+                "age": db_agent.age,
+                "occupation": db_agent.occupation,
+                "occupation_description": db_agent.occupation_description,
+                "nationality": db_agent.nationality,
+                "country_of_residence": db_agent.country_of_residence,
+                "personality_traits": db_agent.personality_traits,
+                "professional_interests": db_agent.professional_interests,
+                "personal_interests": db_agent.personal_interests,
+                "skills": skills,
+                "backstory": db_agent.backstory,
+                "created_at": db_agent.created_at,
+            }
     
     def list_agents(self) -> List[Dict[str, Any]]:
         """
-        List all agents.
+        List all agents from database.
         
         Returns:
             List of agent data dictionaries
         """
-        return [self.get_agent(agent_id) for agent_id in self.agents.keys()]
+        with get_db_context() as db:
+            db_agents = db.query(AgentModel).all()
+            agents = []
+            for db_agent in db_agents:
+                skills = [
+                    {"name": skill.name, "level": skill.level}
+                    for skill in db_agent.skills
+                ]
+                agents.append({
+                    "id": db_agent.id,
+                    "name": db_agent.name,
+                    "age": db_agent.age,
+                    "occupation": db_agent.occupation,
+                    "occupation_description": db_agent.occupation_description,
+                    "nationality": db_agent.nationality,
+                    "country_of_residence": db_agent.country_of_residence,
+                    "personality_traits": db_agent.personality_traits,
+                    "professional_interests": db_agent.professional_interests,
+                    "personal_interests": db_agent.personal_interests,
+                    "skills": skills,
+                    "backstory": db_agent.backstory,
+                    "created_at": db_agent.created_at,
+                })
+            return agents
     
     def delete_agent(self, agent_id: str) -> bool:
         """
-        Delete an agent.
+        Delete an agent from memory and database.
         
         Args:
             agent_id: Agent identifier
@@ -128,13 +201,21 @@ class TinyTroupeAdapter:
         Returns:
             True if deleted, False if not found
         """
-        if agent_id not in self.agents:
-            return False
+        # Remove from memory if present
+        if agent_id in self.agents:
+            person = self.agents[agent_id]
+            self.world.remove_agent(person)
+            del self.agents[agent_id]
+            del self.agent_metadata[agent_id]
         
-        person = self.agents[agent_id]
-        self.world.remove_agent(person)
-        del self.agents[agent_id]
-        del self.agent_metadata[agent_id]
+        # Remove from database
+        with get_db_context() as db:
+            db_agent = db.query(AgentModel).filter(AgentModel.id == agent_id).first()
+            if not db_agent:
+                return False
+            db.delete(db_agent)
+            db.commit()
+        
         return True
     
     def run_simulation(self, steps: int = 1) -> None:

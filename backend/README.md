@@ -37,7 +37,12 @@ cp .env.example .env
 # Edit .env and add your OpenAI API key
 ```
 
-4. Run the server:
+4. Initialize the database:
+```bash
+python db_manager.py init
+```
+
+5. Run the server:
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -52,6 +57,7 @@ backend/
 ├── app/
 │   ├── main.py                    # FastAPI application
 │   ├── config.py                  # Configuration
+│   ├── database.py                # Database setup
 │   ├── api/                       # API routes
 │   │   ├── agents.py
 │   │   ├── simulation.py
@@ -59,18 +65,57 @@ backend/
 │   ├── services/                  # Business logic
 │   │   ├── tinytroupe_adapter.py  # TinyTroupe integration
 │   │   └── simulation_service.py
-│   ├── models/                    # Database models
+│   ├── models/                    # SQLAlchemy ORM models
+│   │   ├── agent.py               # Agent and Skill models
+│   │   ├── location.py            # Location model
+│   │   └── simulation.py          # SimulationLog, Relationship, Routine
 │   └── schemas/                   # Pydantic schemas
+├── alembic/                       # Database migrations
+│   ├── versions/                  # Migration scripts
+│   └── env.py                     # Alembic environment
 ├── tests/                         # Tests
+│   ├── test_api.py
+│   └── test_database.py
+├── db_manager.py                  # Database management utility
+├── alembic.ini                    # Alembic configuration
+├── DATABASE.md                    # Database documentation
 └── requirements.txt               # Dependencies
 ```
 
 ## Development
 
+### Database Management
+
+Initialize database:
+```bash
+python db_manager.py init
+```
+
+Check database status:
+```bash
+python db_manager.py check
+```
+
+Run migrations:
+```bash
+alembic upgrade head
+```
+
+See [DATABASE.md](DATABASE.md) for detailed database documentation.
+
+### Testing
+
 Run tests:
 ```bash
 pytest
 ```
+
+Run database tests specifically:
+```bash
+pytest tests/test_database.py -v
+```
+
+### Running the Server
 
 Run with hot reload:
 ```bash

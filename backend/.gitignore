@@ -1,2 +1,35 @@
 test_*.py
 start_server.py
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Alembic
+# Keep alembic folder but ignore generated files if needed
+
