@@ -31,11 +31,11 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(agents_router, prefix="/api")
-app.include_router(simulation_router, prefix="/api")
-app.include_router(locations_router, prefix="/api")
-app.include_router(world_router, prefix="/api")
-app.include_router(config_router, prefix="/api")
+app.include_router(agents_router)
+app.include_router(simulation_router)
+app.include_router(locations_router)
+app.include_router(world_router)
+app.include_router(config_router, prefix="/api")  # Keep config under /api
 app.include_router(websocket_router)  # WebSocket routes don't need /api prefix
 
 
