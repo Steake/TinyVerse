@@ -6,16 +6,41 @@ The TinyVerse backend has been implemented in Phase 1! Here's how to get started
 
 ### 1. Prerequisites
 
-- Python 3.10+ (Python 3.12 available on this system)
+- **Python 3.13+** (Required for optimal performance)
 - OpenAI API key or Azure OpenAI credentials
 
+To check your Python version:
+```bash
+python3.13 --version
+```
+
+Install Python 3.13:
+- **macOS**: `brew install python@3.13`
+- **Linux**: Use your package manager or pyenv
+- **Windows**: Download from [python.org](https://www.python.org/downloads/)
+
 ### 2. Installation
+
+**Option A: Automated Setup (Recommended)**
+
+```bash
+cd backend
+./setup.sh
+```
+
+The script will:
+- Verify Python 3.13 is installed
+- Create a virtual environment
+- Install all dependencies
+- Guide you through configuration
+
+**Option B: Manual Installation**
 
 ```bash
 cd backend
 
-# Create virtual environment
-python3 -m venv venv
+# Create virtual environment with Python 3.13
+python3.13 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies (this will install TinyTroupe from GitHub)

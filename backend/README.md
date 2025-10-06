@@ -4,9 +4,25 @@ Python backend for TinyVerse using FastAPI and TinyTroupe.
 
 ## Setup
 
+### Quick Setup (Recommended)
+
+Run the automated setup script:
+
+```bash
+cd backend
+./setup.sh
+```
+
+This will:
+- Create a Python 3.13 virtual environment
+- Install all dependencies (including TinyTroupe from GitHub)
+- Guide you through configuration
+
+### Manual Setup
+
 1. Create a virtual environment:
 ```bash
-python -m venv venv
+python3.13 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
