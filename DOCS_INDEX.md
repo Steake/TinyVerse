@@ -10,11 +10,14 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 | [EVALUATION.md](./EVALUATION.md) | Comprehensive project assessment | Project leads, contributors | 10 min |
 | [QUICK_START.md](./QUICK_START.md) | Get up and running quickly | New developers | 5 min |
 | [ROADMAP.md](./ROADMAP.md) | Detailed development plan | Project planners, contributors | 15 min |
+| [ISSUES.md](./ISSUES.md) | GitHub issue tracking guide | Contributors, maintainers | 8 min |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design and architecture | Developers, architects | 12 min |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to contribute to the project | Contributors | 8 min |
 | [API_spec.md](./API_spec.md) | Complete API specification | Backend developers, API users | 10 min |
 | [TINYTROUPE_INTEGRATION.md](./TINYTROUPE_INTEGRATION.md) | TinyTroupe backend integration plan | Backend developers, architects | 15 min |
 | [ISSUE_TINYTROUPE_QA.md](./ISSUE_TINYTROUPE_QA.md) | TinyTroupe integration Q&A | Everyone | 5 min |
+| [.github/README.md](./.github/README.md) | GitHub configuration guide | Maintainers | 5 min |
+| [.github/PROJECT_SETUP.md](./.github/PROJECT_SETUP.md) | GitHub Projects board setup | Maintainers | 10 min |
 
 ## 🎯 Quick Navigation
 
@@ -42,9 +45,12 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 
 #### Plan and Prioritize
 - **"What should we work on next?"** → See [ROADMAP.md](./ROADMAP.md) Immediate Priorities
+- **"How do I track issues?"** → Read [ISSUES.md](./ISSUES.md)
+- **"How to create GitHub issues?"** → Use templates in [.github/ISSUE_TEMPLATE/](./.github/ISSUE_TEMPLATE/)
 - **"What's the timeline?"** → Check [EVALUATION.md](./EVALUATION.md) Recommended Timeline
 - **"What are the risks?"** → Review [EVALUATION.md](./EVALUATION.md) Risk Assessment
 - **"What resources do we need?"** → See [EVALUATION.md](./EVALUATION.md) Resource Requirements
+- **"How to set up GitHub Projects?"** → Follow [.github/PROJECT_SETUP.md](./.github/PROJECT_SETUP.md)
 
 ## 📚 Document Details
 
@@ -99,6 +105,17 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 
 **Best For**: Planning sprints and prioritizing work
 
+### ISSUES.md
+**Purpose**: Guide to creating and managing GitHub issues  
+**Key Sections**:
+- Issue labels and conventions
+- Recommended issues to create for roadmap
+- Milestone structure
+- Progress tracking guidelines
+- Issue templates reference
+
+**Best For**: Contributors and maintainers tracking project progress
+
 ### ARCHITECTURE.md
 **Purpose**: System design and technical architecture  
 **Key Sections**:
@@ -139,6 +156,39 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 
 **Best For**: Backend developers and API consumers
 
+### TINYTROUPE_INTEGRATION.md
+**Purpose**: Detailed backend integration plan  
+**Key Sections**:
+- TinyTroupe overview
+- Integration architecture
+- API mapping
+- Implementation phases
+- Timeline and milestones
+- Frontend changes required
+
+**Best For**: Backend developers implementing TinyTroupe integration
+
+### .github/README.md
+**Purpose**: GitHub configuration documentation  
+**Key Sections**:
+- Issue templates
+- GitHub Actions workflows
+- Label conventions
+- Milestone structure
+
+**Best For**: Maintainers setting up GitHub features
+
+### .github/PROJECT_SETUP.md
+**Purpose**: GitHub Projects board setup guide  
+**Key Sections**:
+- Board structure
+- Views and columns
+- Custom fields
+- Automation rules
+- Usage guidelines
+
+**Best For**: Maintainers creating project boards
+
 ## 🎓 Learning Path
 
 ### For New Team Members
@@ -152,8 +202,10 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 ### For Project Planning
 1. Read [EVALUATION.md](./EVALUATION.md) fully (10 min)
 2. Review [ROADMAP.md](./ROADMAP.md) (15 min)
-3. Check [ARCHITECTURE.md](./ARCHITECTURE.md) deployment section (5 min)
-4. **Total**: ~30 minutes for planning session
+3. Review [ISSUES.md](./ISSUES.md) (8 min)
+4. Check [ARCHITECTURE.md](./ARCHITECTURE.md) deployment section (5 min)
+5. Set up tracking with [.github/PROJECT_SETUP.md](./.github/PROJECT_SETUP.md) (10 min)
+6. **Total**: ~50 minutes for complete planning setup
 
 ### For Backend Development
 1. Read [API_spec.md](./API_spec.md) (10 min)
@@ -169,10 +221,10 @@ Welcome to TinyVerse Stage! This index will help you find the right documentatio
 
 ## 📊 Document Statistics
 
-- **Total Documents**: 7
-- **Total Pages**: ~70 pages (estimated)
-- **Total Words**: ~25,000 words
-- **Total Size**: ~64 KB
+- **Total Documents**: 12 (core + GitHub config)
+- **Total Pages**: ~85 pages (estimated)
+- **Total Words**: ~30,000 words
+- **Total Size**: ~80 KB
 - **Last Updated**: October 2025
 
 ## 🔄 Keeping Documentation Updated

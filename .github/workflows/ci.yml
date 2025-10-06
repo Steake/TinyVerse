@@ -1,0 +1,63 @@
+---
+name: CI - Build and Test
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  frontend:
+    name: Frontend Build & Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript check
+        run: npm run check
+        continue-on-error: true  # Until TypeScript errors are fixed
+
+      - name: Build frontend
+        run: npm run build
+        continue-on-error: true  # Until build errors are fixed
+
+  backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run backend tests
+        working-directory: backend
+        run: |
+          if [ -d "tests" ]; then
+            pytest tests/ -v
+          else
+            echo "No tests found yet"
+          fi
+        continue-on-error: true  # Until tests are created

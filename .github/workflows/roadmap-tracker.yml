@@ -1,0 +1,31 @@
+---
+name: Roadmap Progress Tracker
+
+on:
+  issues:
+    types: [opened, edited, closed, reopened]
+  schedule:
+    - cron: '0 0 * * 1'  # Weekly on Monday at midnight
+  workflow_dispatch: {}  # Allow manual trigger
+
+jobs:
+  track-progress:
+    name: Update Roadmap Progress
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Count roadmap issues
+        id: count
+        run: |
+          echo "This workflow tracks roadmap progress"
+          echo "Future: Auto-update ROADMAP.md with issue status"
+
+      - name: Comment on progress
+        run: |
+          echo "Roadmap tracking:"
+          echo "- Total issues: TBD"
+          echo "- Open issues: TBD"
+          echo "- Closed issues: TBD"
+          echo "Note: Full automation coming soon"
