@@ -26,6 +26,7 @@ class TinyTroupeAdapter:
         self.world = TinyWorld("TinyVerse Simulation")
         self.simulation_running = False
         self.current_step = 0
+        self.event_log: List[Dict[str, Any]] = []
     
     def create_agent(self, agent_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -81,6 +82,12 @@ class TinyTroupeAdapter:
         # Add to world
         self.world.add_agent(person)
         
+        # Log the event
+        self._log_event("agent_created", {
+            "agent_id": agent_id,
+            "agent_name": agent_data["name"],
+        })
+        
         return {
             "id": agent_id,
             **agent_data,
@@ -135,6 +142,12 @@ class TinyTroupeAdapter:
         self.world.remove_agent(person)
         del self.agents[agent_id]
         del self.agent_metadata[agent_id]
+        
+        # Log the event
+        self._log_event("agent_deleted", {
+            "agent_id": agent_id,
+        })
+        
         return True
     
     def run_simulation(self, steps: int = 1) -> None:
@@ -145,12 +158,30 @@ class TinyTroupeAdapter:
             steps: Number of simulation steps to run
         """
         self.simulation_running = True
+        
+        # Log simulation start
+        self._log_event("simulation_started", {
+            "steps": steps,
+            "starting_step": self.current_step,
+        })
+        
         self.world.run(steps)
         self.current_step += steps
+        
+        # Log simulation completion
+        self._log_event("simulation_step_completed", {
+            "steps_completed": steps,
+            "current_step": self.current_step,
+        })
     
     def pause_simulation(self) -> None:
         """Pause the simulation."""
         self.simulation_running = False
+        
+        # Log simulation pause
+        self._log_event("simulation_paused", {
+            "paused_at_step": self.current_step,
+        })
     
     def get_simulation_state(self) -> Dict[str, Any]:
         """
@@ -176,10 +207,23 @@ class TinyTroupeAdapter:
         Returns:
             List of log entries
         """
-        # TODO: Implement proper log extraction from TinyWorld
-        # For now, return empty list as TinyTroupe's event system
-        # needs to be properly integrated
-        return []
+        # Return most recent logs up to limit
+        return self.event_log[-limit:] if self.event_log else []
+    
+    def _log_event(self, event_type: str, data: Dict[str, Any]) -> None:
+        """
+        Log a simulation event.
+        
+        Args:
+            event_type: Type of event
+            data: Event data
+        """
+        log_entry = {
+            "type": event_type,
+            "timestamp": datetime.utcnow().isoformat(),
+            "data": data,
+        }
+        self.event_log.append(log_entry)
 
 
 # Global adapter instance
