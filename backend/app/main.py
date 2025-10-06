@@ -6,10 +6,17 @@ TinyTroupe for AI agent simulation.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from app.config import settings
 from app.api import agents_router, simulation_router, locations_router, connections_router
 from app.api.config import router as config_router
 from app.schemas import HealthCheck
+from app.errors import (
+    validation_exception_handler,
+    api_error_handler,
+    generic_exception_handler,
+    APIError,
+)
 
 
 # Create FastAPI application
@@ -36,6 +43,11 @@ app.include_router(simulation_router, prefix="/api")
 app.include_router(locations_router, prefix="/api")
 app.include_router(connections_router, prefix="/api")
 app.include_router(config_router, prefix="/api")
+
+# Add custom exception handlers
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(APIError, api_error_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 
 @app.on_event("startup")
