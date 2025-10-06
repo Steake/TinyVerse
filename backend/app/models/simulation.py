@@ -41,4 +41,5 @@ class SimulationEvent(Base):
     agent_name = Column(String, nullable=True)
     action_type = Column(String, nullable=False)  # action, interaction, thought, etc.
     content = Column(Text, nullable=False)
-    metadata = Column(JSON, nullable=True)
+    event_metadata = Column(JSON, nullable=True)  # Renamed from 'metadata' to avoid SQLAlchemy conflict
+
