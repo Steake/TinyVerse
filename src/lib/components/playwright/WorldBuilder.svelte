@@ -1,7 +1,5 @@
 <script lang="ts">
-  import API from '../../api';
-
-  var api = API
+  import { api } from '../../api';
 
   // Define the WorldBuilder component
   async function createStory(story: any) {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Sidebar from './lib/components/layout/Sidebar.svelte';
-  import { WorldBuilder } from './lib/components/playwright/WorldBuilder.svelte';
+  import WorldBuilder from './lib/components/playwright/WorldBuilder.svelte';
   import CastingCall from './lib/components/playwright/CastingCall.svelte';
   import RelationshipNetwork from './lib/components/playwright/RelationshipNetwork.svelte';
   import MindPalace from './lib/components/playwright/MindPalace.svelte';
