@@ -56,3 +56,25 @@ def test_get_simulation_state():
     data = response.json()
     assert "is_running" in data
     assert "agents_count" in data
+
+
+def test_create_location():
+    """Test creating a location."""
+    location_data = {
+        "name": "Conference Room",
+        "description": "A spacious meeting room",
+        "location_type": "room",
+    }
+    response = client.post("/api/locations", json=location_data)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["name"] == "Conference Room"
+    assert "id" in data
+
+
+def test_list_locations():
+    """Test listing locations."""
+    response = client.get("/api/locations")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
