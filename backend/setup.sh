@@ -101,7 +101,8 @@ echo ""
 TINYTROUPE_PATH="tinytroupe-local"
 if [ -d "$TINYTROUPE_PATH" ]; then
     echo "� Installing TinyTroupe from local clone ($TINYTROUPE_PATH)..."
-    pip install -e "$TINYTROUPE_PATH" --quiet
+    echo "⏳ This may take 2-3 minutes on first run (resolving llama-index dependencies)..."
+    pip install -e "$TINYTROUPE_PATH" --use-deprecated=legacy-resolver
     echo "✓ TinyTroupe installed (editable mode)"
 else
     echo "❌ Error: TinyTroupe local clone not found at $TINYTROUPE_PATH"
