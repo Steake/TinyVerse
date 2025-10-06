@@ -36,6 +36,17 @@ Analyze and extract insights from your simulations:
   - Humorous tales
 - **Results Extractor**: Export simulation data in various formats (CSV, JSON)
 
+### ⚙️ Settings
+Configure TinyVerse and TinyTroupe integration:
+
+- **OpenAI Configuration**: Set API keys and custom base URLs
+  - Support for standard OpenAI API
+  - Support for Azure OpenAI
+  - Custom base URLs for OpenAI-compatible APIs (LocalAI, OpenRouter, etc.)
+- **TinyTroupe Settings**: Configure model and temperature parameters
+- **Persistent Configuration**: Settings are saved and automatically applied
+- **Real-time Updates**: Changes take effect immediately without server restart
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -51,17 +62,66 @@ git clone https://github.com/Steake/TinyVerse.git
 cd TinyVerse
 ```
 
-2. Install dependencies:
+2. Install frontend dependencies:
 ```bash
 npm install
 ```
 
-3. Start the development server:
+3. Set up the backend (for TinyTroupe integration):
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env
+# Edit .env and add your OpenAI API key
+```
+
+4. Start the backend server:
+```bash
+cd backend
+python3 -m uvicorn app.main:app --reload
+```
+
+5. Start the frontend development server (in a new terminal):
 ```bash
 npm run dev
 ```
 
-4. Open your browser and navigate to `http://localhost:5173`
+6. Open your browser and navigate to `http://localhost:5173`
+
+7. Configure your OpenAI settings in the Settings panel (⚙️ icon in sidebar)
+
+### Backend Configuration
+
+The backend supports flexible OpenAI configuration through the Settings UI or environment variables:
+
+#### Using the Settings UI (Recommended)
+1. Click the ⚙️ Settings icon in the sidebar
+2. Enter your OpenAI API key
+3. (Optional) Set a custom base URL for OpenAI-compatible APIs
+4. Configure TinyTroupe model and temperature
+5. Click "Save Configuration"
+
+#### Using Environment Variables
+Edit the `.env` file in the `backend` directory:
+
+```bash
+# OpenAI Configuration
+OPENAI_API_KEY=sk-your-key-here
+OPENAI_API_BASE_URL=  # Optional: custom base URL
+
+# Or for Azure OpenAI
+# AZURE_OPENAI_KEY=your-azure-key
+# AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+
+# TinyTroupe Configuration
+TINYTROUPE_MODEL=gpt-4o-mini
+TINYTROUPE_TEMPERATURE=0.7
+```
+
+**Custom Base URLs**: You can use TinyVerse with OpenAI-compatible APIs like:
+- LocalAI: `http://localhost:8080/v1`
+- OpenRouter: `https://openrouter.ai/api/v1`
+- Azure OpenAI: Use the Azure endpoint configuration instead
 
 ### Building for Production
 

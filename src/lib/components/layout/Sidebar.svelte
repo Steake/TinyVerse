@@ -11,7 +11,8 @@
   const sections = [
     { id: 'playwright-desk', name: "Playwright's Desk", icon: '🎭' },
     { id: 'grand-stage', name: 'Grand Stage', icon: '🎬' },
-    { id: 'critics-corner', name: "Critic's Corner", icon: '📊' }
+    { id: 'critics-corner', name: "Critic's Corner", icon: '📊' },
+    { id: 'settings', name: 'Settings', icon: '⚙️' }
   ];
 
   let isCollapsed = false;
