@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     
     # OpenAI Configuration (for TinyTroupe)
     openai_api_key: str = ""
+    openai_api_base_url: str = ""  # Custom OpenAI API base URL
     azure_openai_key: str = ""
     azure_openai_endpoint: str = ""
     

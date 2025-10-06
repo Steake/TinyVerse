@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api import agents_router, simulation_router
+from app.api.config import router as config_router
 from app.schemas import HealthCheck
 
 
@@ -32,6 +33,22 @@ app.add_middleware(
 # Include routers
 app.include_router(agents_router, prefix="/api")
 app.include_router(simulation_router, prefix="/api")
+app.include_router(config_router, prefix="/api")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize custom OpenAI client on startup."""
+    try:
+        from app.services.custom_openai_client import setup_custom_openai_client
+        
+        # Setup custom OpenAI client with base URL if configured
+        base_url = settings.openai_api_base_url if settings.openai_api_base_url else None
+        setup_custom_openai_client(base_url=base_url)
+        print(f"Custom OpenAI client initialized with base_url: {base_url or 'default'}")
+    except Exception as e:
+        print(f"Warning: Could not initialize custom OpenAI client: {e}")
+        print("TinyTroupe will use default OpenAI client configuration")
 
 
 @app.get("/", response_model=HealthCheck)

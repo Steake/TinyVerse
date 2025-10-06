@@ -38,4 +38,7 @@ export const API_ENDPOINTS = {
   LOCATION_DETAILS: (id: string) => `/api/locations/${id}`,
   CONNECTIONS: '/api/connections',
   CONNECTION_DETAILS: (id: string) => `/api/connections/${id}`,
+  
+  // Configuration endpoints
+  CONFIG: '/api/config',
 };

@@ -7,6 +7,7 @@
   import MindPalace from './lib/components/playwright/MindPalace.svelte';
   import GrandStage from './lib/components/grand-stage/GrandStage.svelte';
   import CriticsCorner from './lib/components/critics-corner/CriticsCorner.svelte';
+  import Settings from './lib/components/settings/Settings.svelte';
   import { api } from './lib/api';
 
   let activeSection = 'playwright-desk';
@@ -83,6 +84,8 @@
       <GrandStage />
     {:else if activeSection === 'critics-corner'}
       <CriticsCorner />
+    {:else if activeSection === 'settings'}
+      <Settings />
     {/if}
   </div>
 </main>
