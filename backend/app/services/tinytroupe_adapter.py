@@ -172,6 +172,49 @@ class TinyTroupeAdapter:
         self._agent_name_to_id.pop(person.name, None)
         return True
     
+    def add_relationship(self, agent_id: str, relationship: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Add a relationship to an agent.
+        
+        Args:
+            agent_id: Agent identifier
+            relationship: Relationship data
+            
+        Returns:
+            Updated agent data
+        """
+        if agent_id not in self.agent_metadata:
+            raise ValueError(f"Agent {agent_id} not found")
+        
+        if "relationships" not in self.agent_metadata[agent_id]:
+            self.agent_metadata[agent_id]["relationships"] = []
+        
+        self.agent_metadata[agent_id]["relationships"].append(relationship)
+        return self.get_agent(agent_id)
+    
+    def remove_relationship(self, agent_id: str, target_id: str) -> bool:
+        """
+        Remove a relationship from an agent.
+        
+        Args:
+            agent_id: Agent identifier
+            target_id: Target agent identifier
+            
+        Returns:
+            True if removed, False if not found
+        """
+        if agent_id not in self.agent_metadata:
+            return False
+        
+        relationships = self.agent_metadata[agent_id].get("relationships", [])
+        initial_length = len(relationships)
+        
+        self.agent_metadata[agent_id]["relationships"] = [
+            rel for rel in relationships if rel.get("targetId") != target_id
+        ]
+        
+        return len(self.agent_metadata[agent_id]["relationships"]) < initial_length
+    
     def run_simulation(self, steps: int = 1) -> None:
         """
         Run the simulation for a specified number of steps.
@@ -254,6 +297,66 @@ class TinyTroupeAdapter:
         if location_id not in self.locations:
             return False
         del self.locations[location_id]
+        return True
+    
+    def update_location(self, location_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Update a location.
+        
+        Args:
+            location_id: Location identifier
+            update_data: Dictionary with fields to update
+            
+        Returns:
+            Updated location or None if not found
+        """
+        if location_id not in self.locations:
+            return None
+        
+        self.locations[location_id].update(update_data)
+        return self.locations[location_id]
+    
+    def create_connection(self, connection_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a connection between locations.
+        
+        Args:
+            connection_data: Dictionary with connection attributes
+            
+        Returns:
+            Dictionary with connection ID and metadata
+        """
+        connection_id = str(uuid.uuid4())
+        connection = {
+            "id": connection_id,
+            **connection_data,
+            "created_at": datetime.now(timezone.utc),
+        }
+        self.connections[connection_id] = connection
+        return connection
+    
+    def list_connections(self) -> List[Dict[str, Any]]:
+        """
+        List all connections.
+        
+        Returns:
+            List of connection data dictionaries
+        """
+        return list(self.connections.values())
+    
+    def delete_connection(self, connection_id: str) -> bool:
+        """
+        Delete a connection.
+        
+        Args:
+            connection_id: Connection identifier
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        if connection_id not in self.connections:
+            return False
+        del self.connections[connection_id]
         return True
     
     def get_simulation_logs(self, limit: int = 100) -> List[Dict[str, Any]]:

@@ -82,6 +82,44 @@ export class ApiClient {
     return this.request<void>('DELETE', `/agents/${id}`);
   }
 
+  // Agent relationships
+  async addRelationship(agentId: string, relationship: any): Promise<ApiResponse<Agent>> {
+    return this.request<Agent>('POST', `/agents/${agentId}/relationships`, { body: relationship });
+  }
+
+  async removeRelationship(agentId: string, targetId: string): Promise<ApiResponse<Agent>> {
+    return this.request<Agent>('DELETE', `/agents/${agentId}/relationships/${targetId}`);
+  }
+
+  // Agent bulk operations
+  async importAgents(file: File): Promise<ApiResponse<Agent[]>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const url = buildUrl(this.config.baseUrl, '/agents/import');
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw ApiError.fromResponse(response);
+    }
+    
+    return response.json();
+  }
+
+  async exportAgents(): Promise<Blob> {
+    const url = buildUrl(this.config.baseUrl, '/agents/export');
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw ApiError.fromResponse(response);
+    }
+    
+    return response.blob();
+  }
+
   // Location endpoints
   async getLocations(params?: QueryParams): Promise<ApiResponse<Location[]>> {
     return this.request<Location[]>('GET', '/locations', { params });
@@ -93,6 +131,23 @@ export class ApiClient {
 
   async updateLocation(id: string, location: Partial<Location>): Promise<ApiResponse<Location>> {
     return this.request<Location>('PATCH', `/locations/${id}`, { body: location });
+  }
+
+  async deleteLocation(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>('DELETE', `/locations/${id}`);
+  }
+
+  // Connection endpoints
+  async getConnections(params?: QueryParams): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>('GET', '/world/connections', { params });
+  }
+
+  async createConnection(connection: any): Promise<ApiResponse<any>> {
+    return this.request<any>('POST', '/world/connections', { body: connection });
+  }
+
+  async deleteConnection(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>('DELETE', `/world/connections/${id}`);
   }
 
   // Simulation endpoints

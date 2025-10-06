@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import Sidebar from './lib/components/layout/Sidebar.svelte';
   import WorldBuilder from './lib/components/playwright/WorldBuilder.svelte';
   import CastingCall from './lib/components/playwright/CastingCall.svelte';
@@ -8,7 +8,9 @@
   import GrandStage from './lib/components/grand-stage/GrandStage.svelte';
   import CriticsCorner from './lib/components/critics-corner/CriticsCorner.svelte';
   import Settings from './lib/components/settings/Settings.svelte';
+  import ToastContainer from './lib/components/common/ToastContainer.svelte';
   import { api } from './lib/api';
+  import { wsService } from './lib/services/websocket';
 
   let activeSection = 'playwright-desk';
   let activeTab = 'world-builder';
@@ -19,10 +21,18 @@
     try {
       // Initialize the API client (if needed)
       apiInitialized = true;
+      
+      // Connect WebSocket for real-time updates
+      wsService.connect();
     } catch (error) {
       console.error('Failed to initialize API:', error);
       error = 'Failed to initialize API';
     }
+  });
+
+  onDestroy(() => {
+    // Clean up WebSocket connection
+    wsService.disconnect();
   });
 
   function handleTabChange(newTab: string) {
@@ -88,4 +98,7 @@
       <Settings />
     {/if}
   </div>
+  
+  <!-- Global toast notifications -->
+  <ToastContainer />
 </main>
