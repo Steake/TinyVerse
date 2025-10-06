@@ -7,7 +7,7 @@ TinyTroupe for AI agent simulation.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api import agents_router, simulation_router
+from app.api import agents_router, simulation_router, locations_router, connections_router
 from app.api.config import router as config_router
 from app.schemas import HealthCheck
 
@@ -33,6 +33,8 @@ app.add_middleware(
 # Include routers
 app.include_router(agents_router, prefix="/api")
 app.include_router(simulation_router, prefix="/api")
+app.include_router(locations_router, prefix="/api")
+app.include_router(connections_router, prefix="/api")
 app.include_router(config_router, prefix="/api")
 
 

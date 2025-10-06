@@ -23,6 +23,8 @@ class TinyTroupeAdapter:
         """Initialize the adapter with empty registries."""
         self.agents: Dict[str, TinyPerson] = {}
         self.agent_metadata: Dict[str, Dict[str, Any]] = {}
+        self.locations: Dict[str, Dict[str, Any]] = {}
+        self.connections: Dict[str, Dict[str, Any]] = {}
         self.world = TinyWorld("TinyVerse Simulation")
         self.simulation_running = False
         self.current_step = 0
@@ -136,6 +138,223 @@ class TinyTroupeAdapter:
         del self.agents[agent_id]
         del self.agent_metadata[agent_id]
         return True
+    
+    def update_agent(self, agent_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Update an agent's attributes.
+        
+        Args:
+            agent_id: Agent identifier
+            update_data: Dictionary with fields to update
+            
+        Returns:
+            Updated agent data or None if not found
+        """
+        if agent_id not in self.agents:
+            return None
+        
+        person = self.agents[agent_id]
+        metadata = self.agent_metadata[agent_id]
+        
+        # Update TinyPerson attributes
+        if "age" in update_data:
+            person.define("age", update_data["age"])
+            metadata["age"] = update_data["age"]
+        
+        if "occupation" in update_data:
+            person.define("occupation", update_data["occupation"])
+            metadata["occupation"] = update_data["occupation"]
+        
+        if "nationality" in update_data:
+            person.define("nationality", update_data["nationality"])
+        
+        if "country_of_residence" in update_data:
+            person.define("residence", update_data["country_of_residence"])
+        
+        if "personality_traits" in update_data:
+            for trait in update_data["personality_traits"]:
+                person.define("personality_trait", trait)
+        
+        if "professional_interests" in update_data:
+            person.define("professional_interests", update_data["professional_interests"])
+        
+        if "personal_interests" in update_data:
+            person.define("personal_interests", update_data["personal_interests"])
+        
+        if "backstory" in update_data:
+            person.define("backstory", update_data["backstory"])
+        
+        # Update metadata
+        metadata.update({k: v for k, v in update_data.items() if k in metadata})
+        
+        return self.get_agent(agent_id)
+    
+    # Location management methods
+    
+    def create_location(self, location_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a location in the world.
+        
+        Args:
+            location_data: Dictionary with location attributes
+            
+        Returns:
+            Dictionary with location ID and metadata
+        """
+        location_id = str(uuid.uuid4())
+        
+        location = {
+            "id": location_id,
+            "name": location_data["name"],
+            "type": location_data.get("type", "room"),
+            "description": location_data.get("description", ""),
+            "x": location_data.get("x", 0.0),
+            "y": location_data.get("y", 0.0),
+            "width": location_data.get("width", 100.0),
+            "height": location_data.get("height", 100.0),
+            "image": location_data.get("image"),
+            "created_at": datetime.utcnow(),
+        }
+        
+        self.locations[location_id] = location
+        return location
+    
+    def get_location(self, location_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get location details by ID.
+        
+        Args:
+            location_id: Location identifier
+            
+        Returns:
+            Location data or None if not found
+        """
+        return self.locations.get(location_id)
+    
+    def list_locations(self) -> List[Dict[str, Any]]:
+        """
+        List all locations.
+        
+        Returns:
+            List of location data dictionaries
+        """
+        return list(self.locations.values())
+    
+    def update_location(self, location_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Update a location's attributes.
+        
+        Args:
+            location_id: Location identifier
+            update_data: Dictionary with fields to update
+            
+        Returns:
+            Updated location data or None if not found
+        """
+        if location_id not in self.locations:
+            return None
+        
+        location = self.locations[location_id]
+        location.update({k: v for k, v in update_data.items() if k != "id" and k != "created_at"})
+        
+        return location
+    
+    def delete_location(self, location_id: str) -> bool:
+        """
+        Delete a location.
+        
+        Args:
+            location_id: Location identifier
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        if location_id not in self.locations:
+            return False
+        
+        # Delete all connections involving this location
+        connections_to_delete = [
+            conn_id for conn_id, conn in self.connections.items()
+            if conn["source"] == location_id or conn["target"] == location_id
+        ]
+        for conn_id in connections_to_delete:
+            del self.connections[conn_id]
+        
+        del self.locations[location_id]
+        return True
+    
+    # Connection management methods
+    
+    def create_connection(self, connection_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Create a connection between locations.
+        
+        Args:
+            connection_data: Dictionary with connection attributes
+            
+        Returns:
+            Dictionary with connection ID and metadata
+        """
+        source_id = connection_data["source"]
+        target_id = connection_data["target"]
+        
+        # Validate that both locations exist
+        if source_id not in self.locations:
+            raise ValueError(f"Source location {source_id} not found")
+        if target_id not in self.locations:
+            raise ValueError(f"Target location {target_id} not found")
+        
+        connection_id = str(uuid.uuid4())
+        
+        connection = {
+            "id": connection_id,
+            "source": source_id,
+            "target": target_id,
+            "type": connection_data.get("type", "path"),
+            "created_at": datetime.utcnow(),
+        }
+        
+        self.connections[connection_id] = connection
+        return connection
+    
+    def get_connection(self, connection_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get connection details by ID.
+        
+        Args:
+            connection_id: Connection identifier
+            
+        Returns:
+            Connection data or None if not found
+        """
+        return self.connections.get(connection_id)
+    
+    def list_connections(self) -> List[Dict[str, Any]]:
+        """
+        List all connections.
+        
+        Returns:
+            List of connection data dictionaries
+        """
+        return list(self.connections.values())
+    
+    def delete_connection(self, connection_id: str) -> bool:
+        """
+        Delete a connection.
+        
+        Args:
+            connection_id: Connection identifier
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        if connection_id not in self.connections:
+            return False
+        
+        del self.connections[connection_id]
+        return True
+    
+    # Simulation methods
     
     def run_simulation(self, steps: int = 1) -> None:
         """

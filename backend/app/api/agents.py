@@ -60,6 +60,30 @@ async def get_agent(agent_id: str):
     return agent
 
 
+@router.patch("/{agent_id}", response_model=Agent)
+async def update_agent(agent_id: str, agent_update: AgentUpdate):
+    """
+    Update an existing agent.
+    
+    Updates agent attributes. Only provided fields will be updated.
+    """
+    try:
+        updated_agent = adapter.update_agent(agent_id, agent_update.model_dump(exclude_unset=True))
+        if not updated_agent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Agent {agent_id} not found"
+            )
+        return updated_agent
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update agent: {str(e)}"
+        )
+
+
 @router.delete("/{agent_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_agent(agent_id: str):
     """
