@@ -36,8 +36,8 @@ export const worldStore = writable(initialState);
 
 async function fetchSimulationState() {
   try {
-    const simulationState = await api.getSimulationState();
-    worldStore.update(state => ({ ...state, simulationState }));
+    const response = await api.getSimulationStatus();
+    worldStore.update(state => ({ ...state, simulationState: response.data }));
   } catch (error) {
     console.error('Failed to fetch simulation state:', error);
   }

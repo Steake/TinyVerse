@@ -112,6 +112,28 @@ export class ApiClient {
     return this.request('GET', '/simulation/status');
   }
 
+  async controlSimulation(command: 'START' | 'PAUSE' | 'STEP', speed?: number): Promise<ApiResponse<void>> {
+    return this.request<void>('POST', '/simulation/control', { 
+      body: { command, speed } 
+    });
+  }
+
+  // Story endpoints (placeholder - to be implemented with backend)
+  story = {
+    list: async (): Promise<ApiResponse<any[]>> => {
+      return this.request<any[]>('GET', '/stories');
+    },
+    get: async (id: string): Promise<ApiResponse<any>> => {
+      return this.request<any>('GET', `/stories/${id}`);
+    },
+    create: async (data: any): Promise<ApiResponse<any>> => {
+      return this.request<any>('POST', '/stories', { body: data });
+    },
+    delete: async (id: string): Promise<ApiResponse<void>> => {
+      return this.request<void>('DELETE', `/stories/${id}`);
+    }
+  };
+
   // Utility methods
   setConfig(config: Partial<ApiConfig>): void {
     this.config = createConfig(config);
