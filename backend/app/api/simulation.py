@@ -3,7 +3,7 @@ Simulation control API endpoints.
 """
 from fastapi import APIRouter, HTTPException, status
 from typing import List
-from app.schemas import SimulationControl, SimulationState, SimulationLog
+from app.schemas import SimulationControl, SimulationState, SimulationLog, SimulationAction
 from app.services import adapter
 
 
@@ -78,4 +78,21 @@ async def get_simulation_logs(limit: int = 100):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get simulation logs: {str(e)}"
+        )
+
+
+@router.post("/action", response_model=SimulationLog, status_code=status.HTTP_201_CREATED)
+async def execute_simulation_action(action: SimulationAction):
+    """
+    Execute a simulation action.
+    
+    Allows triggering specific agent actions in the simulation.
+    """
+    try:
+        log = adapter.execute_action(action.model_dump())
+        return log
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to execute action: {str(e)}"
         )
