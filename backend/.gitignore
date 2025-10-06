@@ -1,4 +1,6 @@
+# Temporary test files (not in tests directory)
 test_*.py
+!tests/test_*.py
 start_server.py
 
 # Python virtual environment
