@@ -8,6 +8,9 @@
 
 ## 📚 Documentation
 
+> **New?** Start with the [Documentation Index](./DOCS_INDEX.md) to find what you need!
+
+- **[Documentation Index](./DOCS_INDEX.md)** - Navigation guide for all docs
 - **[Repository Evaluation](./EVALUATION.md)** - Comprehensive project assessment
 - **[Quick Start Guide](./QUICK_START.md)** - Get started in 5 minutes
 - **[Development Roadmap](./ROADMAP.md)** - Detailed development plan
@@ -156,9 +159,10 @@ Built with Svelte, TypeScript, and Vite.
 **Last Updated**: 2025
 
 For more details, see:
-- [Repository Evaluation](./EVALUATION.md)
-- [Quick Start Guide](./QUICK_START.md)
-- [Development Roadmap](./ROADMAP.md)
-- [Architecture Guide](./ARCHITECTURE.md)
-- [Contributing Guide](./CONTRIBUTING.md)
-- [API Documentation](./API_spec.md)
+- [Documentation Index](./DOCS_INDEX.md) - Find what you need
+- [Repository Evaluation](./EVALUATION.md) - Project assessment
+- [Quick Start Guide](./QUICK_START.md) - Get started quickly
+- [Development Roadmap](./ROADMAP.md) - Development plan
+- [Architecture Guide](./ARCHITECTURE.md) - System design
+- [Contributing Guide](./CONTRIBUTING.md) - Contribution guidelines
+- [API Documentation](./API_spec.md) - API specification
