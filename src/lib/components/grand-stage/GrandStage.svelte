@@ -34,7 +34,7 @@
   }
 </script>
 
-<div class="h-full flex flex-col">
+<section class="flex-col flex-1">
   <StageControls />
 
   <div class="flex-1 relative overflow-hidden">
@@ -77,17 +77,4 @@
       {/if}
     </div>
   </div>
-</div>
-
-<style>
-  .absolute {
-    position: absolute;
-  }
-
-  .inset-0 {
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-  }
-</style>
+</section>

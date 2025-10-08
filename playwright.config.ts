@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const tinytroupeMockFlag = process.env.USE_TINYTROUPE_MOCK ?? '0';
+const uvicornReloadFlag = process.env.UVICORN_RELOAD ?? '0';
+const tinytroupeMaxTokens = process.env.TINYTROUPE_MAX_TOKENS ?? '8192';
+const backendStartCommand = `cd backend && UVICORN_RELOAD=${uvicornReloadFlag} TINYTROUPE_MAX_TOKENS=${tinytroupeMaxTokens} USE_TINYTROUPE_MOCK=${tinytroupeMockFlag} bash start.sh`;
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false, // Run tests sequentially for simulation tests
@@ -23,7 +28,7 @@ export default defineConfig({
 
   webServer: [
     {
-      command: 'cd backend && bash start.sh',
+      command: backendStartCommand,
       url: 'http://localhost:8000',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,

@@ -11,7 +11,8 @@
   let containerDiv: HTMLDivElement;
   let simulation: d3.Simulation<d3.SimulationNodeDatum, d3.SimulationLinkDatum<d3.SimulationNodeDatum>>;
   let agents: Agent[] = [];
-  let editModal = { show: false, sourceAgent: null as Agent | null, targetAgent: null as Agent | null };
+  let editModal = { show: false, sourceAgent: undefined as Agent | undefined, targetAgent: undefined as Agent | undefined };
+  let isSavingRelationship = false;
   let selectedSourceAgent: Agent | null = null;
   let filterType: Relationship['type'] | 'all' = 'all';
   let selectedGroup: string | null = null;
@@ -210,8 +211,8 @@
     } else if (selectedSourceAgent.id !== agent.id) {
       editModal = {
         show: true,
-        sourceAgent: selectedSourceAgent,
-        targetAgent: agent
+          sourceAgent: selectedSourceAgent,
+          targetAgent: agent
       };
       selectedSourceAgent = null;
     }
@@ -229,7 +230,7 @@
 
   function getRelationshipLinks() {
     return agents.flatMap(agent =>
-      agent.relationships
+      (agent.relationships || [])
         .filter(rel => filterType === 'all' || rel.type === filterType)
         .map(rel => ({
           source: agent.id,
@@ -267,10 +268,23 @@
     event.subject.fy = null;
   }
 
-  function handleRelationshipSave(event: CustomEvent<Relationship>) {
+  async function handleRelationshipSave(event: CustomEvent<Relationship>) {
     const relationship = event.detail;
-    agentStore.addRelationship(editModal.sourceAgent!.id, relationship);
-    editModal = { show: false, sourceAgent: null, targetAgent: null };
+
+    if (!editModal.sourceAgent) {
+      return;
+    }
+
+    try {
+      isSavingRelationship = true;
+      await agentStore.addRelationship(editModal.sourceAgent.id, relationship);
+        editModal = { show: false, sourceAgent: undefined, targetAgent: undefined };
+  selectedSourceAgent = null;
+    } catch (error) {
+      console.error('Failed to save relationship', error);
+    } finally {
+      isSavingRelationship = false;
+    }
   }
 
   function handleGroupSelect(event: CustomEvent<string | null>) {
@@ -329,8 +343,12 @@
     show={editModal.show}
     sourceAgent={editModal.sourceAgent}
     targetAgent={editModal.targetAgent}
+    saving={isSavingRelationship}
     on:save={handleRelationshipSave}
-    on:close={() => editModal = { show: false, sourceAgent: null, targetAgent: null }}
+      on:close={() => {
+        editModal = { show: false, sourceAgent: undefined, targetAgent: undefined };
+        selectedSourceAgent = null;
+      }}
   />
 </div>
 

@@ -103,6 +103,10 @@ export class WebSocketService {
         toastStore.warning('Simulation stopped');
         break;
 
+      case 'state':
+        worldStore.update((current) => ({ ...current, simulationState: message.data ?? null }));
+        break;
+
       case 'error':
         toastStore.error(message.data.message || 'Simulation error occurred');
         break;

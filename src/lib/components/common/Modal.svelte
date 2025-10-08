@@ -20,17 +20,31 @@
   }
 </script>
 
-<div class="modal" class:modal-open={show} role="dialog" aria-modal={show} aria-labelledby="modal-title">
-  <div class="modal-box">
-    <h3 id="modal-title" class="font-bold text-lg mb-4">{title}</h3>
-    <slot />
+{#if show}
+  <div class="overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title" class="modal-title">{title}</h3>
+        <button
+          class="btn-ghost btn-icon"
+          on:click={() => dispatch('close')}
+          aria-label="Close modal"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="modal-body">
+        <slot />
+      </div>
+    </div>
+    <div 
+      class="modal-backdrop" 
+      on:click={handleBackdropClick}
+      on:keydown={handleBackdropKeydown}
+      role="button"
+      tabindex="0"
+      aria-label="Close modal"
+      style="position: absolute; inset: 0; z-index: -1;"
+    />
   </div>
-  <div 
-    class="modal-backdrop" 
-    on:click={handleBackdropClick}
-    on:keydown={handleBackdropKeydown}
-    role="button"
-    tabindex="0"
-    aria-label="Close modal"
-  />
-</div>
+{/if}

@@ -15,7 +15,7 @@
   $: group = $groupStore.find(g => g.id === agent.group);
 
   function getTooltipText(): string {
-    return `${agent.occupation}\n${agent.personalityTraits.join(', ')}`;
+    return `${agent.occupation}\n${(agent.personality_traits || []).join(', ')}`;
   }
 
   function handleDragStart(event: DragEvent) {

@@ -7,7 +7,14 @@ TinyTroupe for AI agent simulation.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api import agents_router, simulation_router, locations_router, websocket_router, world_router
+from app.api import (
+    agents_router,
+    simulation_router,
+    locations_router,
+    websocket_router,
+    world_router,
+    autofill_router,
+)
 from app.api.config import router as config_router
 from app.schemas import HealthCheck
 
@@ -35,6 +42,7 @@ app.include_router(agents_router)
 app.include_router(simulation_router)
 app.include_router(locations_router)
 app.include_router(world_router)
+app.include_router(autofill_router)
 app.include_router(config_router, prefix="/api")  # Keep config under /api
 app.include_router(websocket_router)  # WebSocket routes don't need /api prefix
 

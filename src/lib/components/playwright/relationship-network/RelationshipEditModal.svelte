@@ -7,24 +7,37 @@
   export let sourceAgent: Agent | undefined;
   export let targetAgent: Agent | undefined;
   export let relationship: Relationship | null = null;
+  export let saving = false;
 
   const dispatch = createEventDispatcher<{
     save: Relationship;
     close: void;
   }>();
 
-  let editingRelationship: Relationship = relationship ? { ...relationship } : {
+  let editingRelationship: Relationship = {
     targetId: targetAgent?.id || '',
     type: 'friend',
     strength: 3,
     description: ''
   };
 
+  $: if (show) {
+    editingRelationship = relationship ? { ...relationship } : {
+      targetId: targetAgent?.id || '',
+      type: 'friend',
+      strength: 3,
+      description: ''
+    };
+  }
+
   $: if (targetAgent && !relationship) {
     editingRelationship.targetId = targetAgent.id;
   }
 
   function handleSubmit() {
+    if (saving) {
+      return;
+    }
     dispatch('save', editingRelationship);
   }
 </script>
@@ -83,10 +96,16 @@
       </div>
 
       <div class="modal-action">
-        <button type="button" class="btn" on:click={() => dispatch('close')}>
+        <button type="button" class="btn" on:click={() => dispatch('close')} disabled={saving}>
           Cancel
         </button>
-        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="submit" class="btn btn-primary" class:loading={saving} disabled={saving}>
+          {#if saving}
+            Saving...
+          {:else}
+            Save
+          {/if}
+        </button>
       </div>
     </form>
   {/if}

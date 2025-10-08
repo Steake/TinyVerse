@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import type { Location } from '../../../stores/world';
   import BaseModal from '../../common/BaseModal.svelte';
+  import { autofill } from '../../../actions/autofill';
 
   export let show = false;
   export let location: Location | null = null;
@@ -26,6 +27,13 @@
   function handleClose() {
     dispatch('close');
   }
+
+  const handleTypeAutofill = (value: unknown) => {
+    const suggestion = String(value ?? '').toLowerCase();
+    if (suggestion === 'room' || suggestion === 'outdoor' || suggestion === 'special') {
+      formData.type = suggestion as Location['type'];
+    }
+  };
 </script>
 
 <BaseModal
@@ -45,6 +53,7 @@
           class="input input-bordered"
           bind:value={formData.name}
           required
+          use:autofill={{ scope: 'location', field: 'name', seed: () => formData }}
         />
       </div>
 
@@ -57,6 +66,12 @@
           class="select select-bordered"
           bind:value={formData.type}
           required
+          use:autofill={{
+            scope: 'location',
+            field: 'type',
+            seed: () => formData,
+            onValue: handleTypeAutofill
+          }}
         >
           <option value="room">Room</option>
           <option value="outdoor">Outdoor</option>
@@ -73,6 +88,7 @@
           class="textarea textarea-bordered"
           rows="3"
           bind:value={formData.description}
+          use:autofill={{ scope: 'location', field: 'description', seed: () => formData }}
         />
       </div>
 

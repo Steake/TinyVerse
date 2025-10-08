@@ -1,5 +1,14 @@
-import type { ApiConfig, ApiResponse, QueryParams, SimulationAction, LogFilters } from './types';
-import type { Agent, Location, SimulationLog } from '../stores/types';
+import type {
+  ApiConfig,
+  ApiResponse,
+  QueryParams,
+  SimulationAction,
+  LogFilters,
+  SimulationLogDTO,
+  SimulationControlResponseDTO,
+  SimulationStateDTO,
+} from './types';
+import type { Agent, Location } from '../stores/types';
 import { ApiError } from './errors';
 import { createConfig } from './config';
 import { buildUrl, delay, isNetworkError, withTimeout } from './utils';
@@ -45,8 +54,25 @@ export class ApiClient {
           throw ApiError.fromResponse(response);
         }
 
-        const data = await response.json();
-        return data as ApiResponse<T>;
+        const rawBody = await response.text();
+
+        if (!rawBody) {
+          return { data: undefined as T };
+        }
+
+        let payload: unknown;
+        try {
+          payload = JSON.parse(rawBody);
+        } catch (parseError) {
+          console.warn('Received non-JSON response', parseError);
+          return { data: rawBody as T };
+        }
+
+        if (payload && typeof payload === 'object' && 'data' in payload) {
+          return payload as ApiResponse<T>;
+        }
+
+        return { data: payload as T };
       } catch (error: any) {
         lastError = error;
 
@@ -151,25 +177,20 @@ export class ApiClient {
   }
 
   // Simulation endpoints
-  async executeAction(action: SimulationAction): Promise<ApiResponse<SimulationLog>> {
-    return this.request<SimulationLog>('POST', '/simulation/actions', { body: action });
+  async executeAction(action: SimulationAction): Promise<ApiResponse<SimulationLogDTO>> {
+    return this.request<SimulationLogDTO>('POST', '/simulation/action', { body: action });
   }
 
-  async getLogs(filters?: LogFilters): Promise<ApiResponse<SimulationLog[]>> {
-    return this.request<SimulationLog[]>('GET', '/simulation/logs', { params: filters as QueryParams });
+  async getLogs(filters?: LogFilters): Promise<ApiResponse<SimulationLogDTO[]>> {
+    return this.request<SimulationLogDTO[]>('GET', '/simulation/logs', { params: filters as QueryParams });
   }
 
-  async getSimulationStatus(): Promise<ApiResponse<{
-    isRunning: boolean;
-    currentTime: Date;
-    speed: number;
-  }>> {
-    return this.request('GET', '/simulation/status');
-  }
-
-  async controlSimulation(action: 'start' | 'pause' | 'stop' | 'step', steps?: number): Promise<ApiResponse<void>> {
-    return this.request<void>('POST', '/simulation/control', { 
-      body: { action, steps } 
+  async controlSimulation(
+    action: 'start' | 'pause' | 'stop' | 'step',
+    steps?: number
+  ): Promise<ApiResponse<SimulationControlResponseDTO>> {
+    return this.request<SimulationControlResponseDTO>('POST', '/simulation/control', {
+      body: { action, steps }
     });
   }
 
@@ -198,8 +219,8 @@ export class ApiClient {
     }
   };
 
-  async getSimulationState(): Promise<ApiResponse<any>> {
-    return this.request('GET', '/simulation/state');
+  async getSimulationState(): Promise<ApiResponse<SimulationStateDTO>> {
+    return this.request<SimulationStateDTO>('GET', '/simulation/state');
   }
 
   // Utility methods

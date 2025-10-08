@@ -66,30 +66,79 @@ export interface Connection {
   type: 'path' | 'door' | 'portal';
 }
 
+export interface SimulationLogMetadata {
+  rendering?: string;
+  target?: string;
+  rawContent?: Record<string, unknown>;
+  source?: string;
+  kind?: string;
+  [key: string]: unknown;
+}
+
 export interface SimulationLog {
   id: string;
-  timestamp: Date;
-  agentId: string;
-  action: 'MOVE' | 'TALK';
-  data: any;
+  timestamp: string;
+  agentId?: string;
+  agentName?: string;
+  action: string;
+  content: string;
+  metadata?: SimulationLogMetadata;
 }
 
 export interface MentalFaculty {
   id: string;
+  agent_id: string;
+  key: string;
   name: string;
   description: string;
   type: 'memory' | 'grounding' | 'tool-use';
-  isActive: boolean;
+  is_active: boolean;
   parameters: FacultyParameter[];
+  created_at: string;
 }
 
 export interface FacultyParameter {
   id: string;
   name: string;
-  description: string;
-  type: 'number' | 'boolean' | 'range';
-  value: number | boolean;
+  description?: string;
+  type: 'number' | 'boolean' | 'range' | 'select' | 'multi-select';
+  value: number | boolean | string | string[] | null;
   min?: number;
   max?: number;
   step?: number;
+  options?: Array<{ value: string; label: string }>;
+}
+
+export interface MentalFacultyDefinition {
+  key: string;
+  name: string;
+  description: string;
+  type: 'memory' | 'grounding' | 'tool-use';
+  parameters: FacultyParameter[];
+}
+
+export interface ToolDefinition {
+  key: string;
+  name: string;
+  description: string;
+  capabilities: string[];
+  parameters: FacultyParameter[];
+}
+
+export interface ToolInstance {
+  id: string;
+  agent_id: string;
+  key: string;
+  name: string;
+  description: string;
+  capabilities: string[];
+  created_at: string;
+}
+
+export interface MemoryEntry {
+  content: string;
+  type?: string;
+  role?: string;
+  simulation_timestamp?: string;
+  [key: string]: unknown;
 }

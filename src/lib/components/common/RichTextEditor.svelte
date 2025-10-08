@@ -32,6 +32,20 @@
     });
   });
 
+  // Keep the editor in sync when parent updates `content` programmatically
+  // (e.g., after an LLM autofill). Avoid feedback loops by only setting when
+  // the HTML actually differs and by not emitting an update event.
+  $: if (editor && typeof content === 'string') {
+    try {
+      const current = editor.getHTML();
+      if (content !== current) {
+        editor.commands.setContent(content, false /* emitUpdate */);
+      }
+    } catch (e) {
+      // No-op: guard against transient editor lifecycle edge cases
+    }
+  }
+
   onDestroy(() => {
     if (editor) {
       editor.destroy();

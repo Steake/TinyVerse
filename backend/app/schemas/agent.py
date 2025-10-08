@@ -2,7 +2,7 @@
 Pydantic schemas for API request/response models.
 """
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal, Union
 from datetime import datetime
 
 
@@ -131,6 +131,144 @@ class SimulationLog(BaseModel):
     action_type: str
     content: str
     metadata: Optional[Dict[str, Any]] = None
+
+
+class SimulationControlResponse(BaseModel):
+    """Response payload for simulation control mutations."""
+    message: str
+    state: SimulationState
+
+
+class FacultyParameter(BaseModel):
+    """Configurable parameter for a mental faculty or tool."""
+    id: str
+    name: str
+    description: Optional[str] = None
+    type: Literal['number', 'boolean', 'range', 'select', 'multi-select']
+    value: Union[int, float, bool, str, List[str], None] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
+    step: Optional[float] = None
+    options: Optional[List[Dict[str, str]]] = None
+
+
+class MentalFacultyDefinition(BaseModel):
+    """Metadata describing a mental faculty capability."""
+    key: str
+    name: str
+    description: str
+    type: Literal['memory', 'grounding', 'tool-use']
+    parameters: List[FacultyParameter] = Field(default_factory=list)
+
+
+class MentalFacultyInstance(BaseModel):
+    """Mental faculty assigned to an agent."""
+    id: str
+    agent_id: str
+    key: str
+    name: str
+    description: str
+    type: Literal['memory', 'grounding', 'tool-use']
+    is_active: bool = True
+    parameters: List[FacultyParameter] = Field(default_factory=list)
+    created_at: datetime
+
+
+class MentalFacultyAssignRequest(BaseModel):
+    """Request payload to assign a mental faculty to an agent."""
+    key: str
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    activate: bool = True
+
+
+class MentalFacultyUpdateRequest(BaseModel):
+    """Request payload to update an assigned mental faculty."""
+    parameters: Optional[Dict[str, Any]] = None
+    activate: Optional[bool] = None
+
+
+class ToolDefinition(BaseModel):
+    """Metadata describing an available cognitive tool."""
+    key: str
+    name: str
+    description: str
+    capabilities: List[str] = Field(default_factory=list)
+    parameters: List[FacultyParameter] = Field(default_factory=list)
+
+
+class ToolInstance(BaseModel):
+    """Tool instance assigned to an agent."""
+    id: str
+    agent_id: str
+    key: str
+    name: str
+    description: str
+    capabilities: List[str] = Field(default_factory=list)
+    parameters: List[FacultyParameter] = Field(default_factory=list)
+    created_at: datetime
+
+
+class ToolAssignRequest(BaseModel):
+    """Request payload to assign a tool to an agent."""
+    key: str
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ToolUpdateRequest(BaseModel):
+    """Request payload to update a tool assignment."""
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+
+class MemoryEntry(BaseModel):
+    """Serialized representation of a memory item."""
+    role: Optional[str] = None
+    content: str
+    type: Optional[str] = None
+    simulation_timestamp: Optional[str] = None
+
+
+class MemoryQuery(BaseModel):
+    """Query semantic memory for relevant items."""
+    query: str
+    top_k: int = Field(default=5, ge=1, le=40)
+
+
+class MemorySummaryRequest(BaseModel):
+    """Request to produce a semantic memory summary."""
+    query: str
+    batch_size: int = Field(default=20, ge=5, le=100)
+
+
+class MemoryClearRequest(BaseModel):
+    """Request payload to clear portions of episodic memory."""
+    max_prefix: Optional[int] = Field(default=None, ge=0)
+    max_suffix: Optional[int] = Field(default=None, ge=0)
+
+
+class MemoryIngestRequest(BaseModel):
+    """Request payload for ingesting documents into semantic memory."""
+    text: Optional[str] = None
+    url: Optional[str] = None
+    document_name: Optional[str] = None
+
+
+class AutofillRequest(BaseModel):
+    """LLM-powered autofill request."""
+    form: Literal['agent', 'location']
+    context: Optional[str] = None
+    seed: Optional[Dict[str, Any]] = None
+
+
+class AutofillAgentResponse(BaseModel):
+    """Autofill response for an agent form."""
+    form: Literal['agent']
+    data: AgentCreate
+
+
+class AutofillLocationResponse(BaseModel):
+    """Autofill response for a location form."""
+    form: Literal['location']
+    data: LocationCreate
 
 
 class HealthCheck(BaseModel):

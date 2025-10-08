@@ -73,12 +73,19 @@ export const handlers = {
       throw createError('ACTION_ERROR', 'Failed to execute action');
     }
     
+    const timestamp = action.timestamp instanceof Date
+      ? action.timestamp.toISOString()
+      : new Date(action.timestamp).toISOString();
+
     const log: SimulationLog = {
       id: crypto.randomUUID(),
-      timestamp: action.timestamp,
+      timestamp,
       agentId: action.agentId,
       action: action.type,
-      data: action.data
+      content: JSON.stringify(action.data),
+      metadata: {
+        rawContent: action.data
+      }
     };
     
     mockLogs.push(log);
@@ -102,10 +109,10 @@ export const handlers = {
         filteredLogs = filteredLogs.filter(log => log.action === filters.action);
       }
       if (filters.startTime) {
-        filteredLogs = filteredLogs.filter(log => log.timestamp >= filters.startTime!);
+        filteredLogs = filteredLogs.filter(log => new Date(log.timestamp).getTime() >= filters.startTime!.getTime());
       }
       if (filters.endTime) {
-        filteredLogs = filteredLogs.filter(log => log.timestamp <= filters.endTime!);
+        filteredLogs = filteredLogs.filter(log => new Date(log.timestamp).getTime() <= filters.endTime!.getTime());
       }
     }
     

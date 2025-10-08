@@ -32,6 +32,18 @@
     });
   });
 
+  // Keep the editor in sync when parent updates `content` programmatically
+  $: if (editor && typeof content === 'string') {
+    try {
+      const current = editor.getHTML();
+      if (content !== current) {
+        editor.commands.setContent(content, false);
+      }
+    } catch (e) {
+      // ignore lifecycle races
+    }
+  }
+
   onDestroy(() => {
     if (editor) {
       editor.destroy();

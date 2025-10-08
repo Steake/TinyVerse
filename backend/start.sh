@@ -42,9 +42,34 @@ if [ ! -f "$SCRIPT_DIR/.env" ]; then
     fi
 fi
 
+# Export variables from .env so dependent services (TinyTroupe, etc.) can read them
+set -a
+source "$SCRIPT_DIR/.env"
+set +a
+
+# Allow tests to run against TinyTroupe mock without external API calls
+USE_MOCK_RAW="${USE_TINYTROUPE_MOCK:-}"
+USE_MOCK="$(printf '%s' "$USE_MOCK_RAW" | tr '[:upper:]' '[:lower:]')"
+if [[ "$USE_MOCK" == "1" || "$USE_MOCK" == "true" ]]; then
+    echo "❌ TinyTroupe mock mode has been removed. Please unset USE_TINYTROUPE_MOCK or set it to 0 to run against the real provider."
+    exit 1
+fi
+
 # Start the server
 echo "🌟 Starting FastAPI server..."
 echo "   API: http://localhost:8000"
 echo "   Docs: http://localhost:8000/docs"
 echo ""
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Align TinyTroupe limits with DeepSeek defaults if not configured explicitly
+export TINYTROUPE_MAX_TOKENS="${TINYTROUPE_MAX_TOKENS:-8192}"
+
+RELOAD_SETTING="${UVICORN_RELOAD:-1}"
+UVICORN_CMD=("uvicorn" "app.main:app" "--host" "0.0.0.0" "--port" "8000")
+
+if [[ "$RELOAD_SETTING" == "1" || "$RELOAD_SETTING" == "true" ]]; then
+    UVICORN_CMD+=("--reload")
+else
+    echo "♻️  Uvicorn auto-reload disabled (UVICORN_RELOAD=$RELOAD_SETTING)"
+fi
+
+"${UVICORN_CMD[@]}"

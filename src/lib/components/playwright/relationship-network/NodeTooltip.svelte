@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { Agent } from '../../../stores/agents';
 
-  export let agent: Agent;
+  export let agent: Agent | null = null;
   export let show: boolean = false;
 </script>
 
-{#if show}
+{#if show && agent}
   <div
     class="tooltip bg-base-200 p-3 rounded-lg shadow-lg text-sm min-w-[200px] pointer-events-none absolute top-4 left-4"
   >
@@ -17,7 +17,7 @@
       <p>{agent.occupation}</p>
       <p>{agent.nationality}</p>
       <p class="text-xs mt-2">
-        {agent.personalityTraits.join(', ')}
+        {(agent.personality_traits ?? []).join(', ')}
       </p>
     </div>
   </div>

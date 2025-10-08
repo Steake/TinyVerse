@@ -1,16 +1,8 @@
 /**
- * E2E Test: Call Center Simulation
- * 
- * Simulates a complete call center operation with:
- * - TQ Floor (Telequestioners - cold callers)
- * - Closers (Deal closers)
- * - Compliance team
- * - Customers (simulated leads)
- * 
- * Produces artifacts:
- * - Call transcripts
- * - Performance metrics
- * - Compliance logs
+ * E2E Test: Call Center Simulation (UI-driven)
+ *
+ * Exercises the TinyVerse web interface to provision the call center scenario,
+ * run a DeepSeek-backed simulation, and export artifacts suitable for CI.
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -19,13 +11,85 @@ import * as path from 'path';
 
 const ARTIFACTS_DIR = path.join(process.cwd(), 'test-artifacts', 'call-center');
 const API_BASE = 'http://localhost:8000';
+const mockFlagRaw = (process.env.USE_TINYTROUPE_MOCK ?? '0').toLowerCase();
+const usingMock = mockFlagRaw === '1' || mockFlagRaw === 'true';
 
-// Ensure artifacts directory exists
+if (usingMock) {
+  throw new Error(
+    'TinyVerse E2E requires the real TinyTroupe provider. Set USE_TINYTROUPE_MOCK=0 (or unset) before running the suite.',
+  );
+}
+
+const REQUEST_TIMEOUT_MS = 360_000;
+const EXPECTED_LOCATION_COUNT = 4;
+const EXPECTED_AGENT_COUNT = 7;
+const DEFAULT_SIMULATION_STEPS = 18;
+
+const resolveSimulationSteps = () => {
+  const override = process.env.E2E_SIMULATION_STEPS;
+  if (override) {
+    const parsed = Number.parseInt(override, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return DEFAULT_SIMULATION_STEPS;
+};
+
+const SIMULATION_STEPS = resolveSimulationSteps();
+
+const resolveSimulationTimeout = (steps: number) => {
+  const perStepBudget = 300_000;
+  const minimumBudget = 420_000;
+  return Math.max(minimumBudget, steps * perStepBudget);
+};
+
+const stripMarkup = (value?: string | null) => {
+  if (!value) return '';
+  const withoutAnsi = value.replace(/\u001b\[[0-9;]*m/g, '');
+  return withoutAnsi
+    .replace(/\[([^\]]+)\]/g, (_, inner: string) => {
+      const normalized = inner.replace(/[^A-Za-z]/g, '');
+      if (!normalized) return '';
+      if (normalized === normalized.toUpperCase()) {
+        return `[${inner.trim()}]`;
+      }
+      return '';
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const humanizeLogEntry = (log: any) => {
+  if (!log) return '';
+
+  const action = log?.metadata?.raw_content?.action;
+  if (action) {
+    const details = stripMarkup(action.content);
+    const target = action.target ? ` \u2192 ${action.target}` : '';
+    return `${action.type}${target}${details ? ` — ${details}` : ''}`.trim();
+  }
+
+  const stimuli = log?.metadata?.raw_content?.stimuli;
+  if (Array.isArray(stimuli) && stimuli.length > 0) {
+    return stimuli
+      .map((stim: any) => {
+        const label = stim.source ? `${stim.source}: ` : '';
+        return `${label}${stripMarkup(stim.content)}`.trim();
+      })
+      .join(' | ');
+  }
+
+  return stripMarkup(log?.content);
+};
+
+fs.rmSync(ARTIFACTS_DIR, { recursive: true, force: true });
 fs.mkdirSync(ARTIFACTS_DIR, { recursive: true });
 
 test.describe('Call Center Simulation E2E', () => {
   let page: Page;
-  
+
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
   });
@@ -34,404 +98,342 @@ test.describe('Call Center Simulation E2E', () => {
     await page.close();
   });
 
-  test('Setup: Create call center environment and agents', async () => {
-    // Navigate to app
+  test('Setup: Configure call center via UI', async () => {
     await page.goto('/');
-    await expect(page.locator('text=Playwright Desk')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('world-builder')).toBeVisible({ timeout: 15_000 });
 
-    // Create locations via API (faster than UI)
-    const locations = [
-      {
-        name: 'TQ Floor',
-        description: 'Telequestioners cold calling area - high energy sales floor',
-        capacity: 20,
-        environment_type: 'office',
-        metadata: {
-          department: 'sales',
-          function: 'cold_calling',
-          noise_level: 'high',
-        }
-      },
-      {
-        name: 'Closers Room',
-        description: 'Deal closing specialists - experienced sales veterans',
-        capacity: 10,
-        environment_type: 'office',
-        metadata: {
-          department: 'sales',
-          function: 'closing',
-          noise_level: 'moderate',
-        }
-      },
-      {
-        name: 'Compliance Office',
-        description: 'Compliance and quality assurance team',
-        capacity: 5,
-        environment_type: 'office',
-        metadata: {
-          department: 'compliance',
-          function: 'qa',
-          noise_level: 'low',
-        }
-      },
-      {
-        name: 'Customer Zone',
-        description: 'Virtual customer environment',
-        capacity: 100,
-        environment_type: 'virtual',
-        metadata: {
-          type: 'customer_pool',
-        }
+    // Ensure clean state: delete all existing agents and locations first
+    try {
+      const agentsResponse = await page.request.get(`${API_BASE}/agents`);
+      if (agentsResponse.ok()) {
+        const existingAgents = await agentsResponse.json();
+        await Promise.all(
+          existingAgents.map((agent: any) =>
+            page.request.delete(`${API_BASE}/agents/${agent.id}`)
+          )
+        );
       }
-    ];
 
-    const createdLocations: any[] = [];
-    for (const loc of locations) {
-      const response = await page.request.post(`${API_BASE}/locations`, {
-        data: loc
-      });
-      expect(response.ok()).toBeTruthy();
-      const data = await response.json();
-      createdLocations.push(data);
-      console.log(`Created location: ${data.name}`);
+      const locationsResponse = await page.request.get(`${API_BASE}/locations`);
+      if (locationsResponse.ok()) {
+        const existingLocations = await locationsResponse.json();
+        await Promise.all(
+          existingLocations.map((location: any) =>
+            page.request.delete(`${API_BASE}/locations/${location.id}`)
+          )
+        );
+      }
+    } catch (error) {
+      console.warn('Pre-cleanup warning:', error);
     }
 
-    // Save location IDs for later use
-    fs.writeFileSync(
-      path.join(ARTIFACTS_DIR, 'locations.json'),
-      JSON.stringify(createdLocations, null, 2)
-    );
+    // Wait for any error toasts to clear
+    await page.waitForTimeout(2000);
 
-    // Create TQ agents (telequestioners)
-    const tqAgents = [
-      {
-        name: 'Jake "The Snake" Morrison',
-        age: 28,
-        description: 'Aggressive TQ with a gift for opening cold leads. High energy, sometimes crosses lines.',
-        personality: 'extroverted, competitive, pushy',
-        occupation: 'Telequestioner',
-        routines: [
-          { name: 'morning_coffee', description: 'Gets pumped up with coffee and motivational speeches', frequency: 'daily' },
-          { name: 'dial_blitz', description: 'Makes 50+ calls in rapid succession', frequency: 'multiple_daily' },
-        ],
-        skills: [
-          { name: 'cold_calling', proficiency: 85 },
-          { name: 'objection_handling', proficiency: 75 },
-          { name: 'lead_qualification', proficiency: 70 },
-        ],
-        metadata: {
-          role: 'tq',
-          department: 'sales',
-          location: 'TQ Floor',
-          performance_tier: 'top',
-          compliance_issues: 2,
-        }
-      },
-      {
-        name: 'Maria Hernandez',
-        age: 24,
-        description: 'Bilingual TQ with excellent rapport-building skills. Empathetic approach, high conversion.',
-        personality: 'warm, empathetic, persistent',
-        occupation: 'Telequestioner',
-        routines: [
-          { name: 'lead_review', description: 'Reviews lead information before calling', frequency: 'daily' },
-          { name: 'follow_up_tracking', description: 'Meticulously tracks callbacks', frequency: 'daily' },
-        ],
-        skills: [
-          { name: 'cold_calling', proficiency: 80 },
-          { name: 'rapport_building', proficiency: 90 },
-          { name: 'bilingual_communication', proficiency: 95 },
-        ],
-        metadata: {
-          role: 'tq',
-          department: 'sales',
-          location: 'TQ Floor',
-          performance_tier: 'top',
-          compliance_issues: 0,
-        }
-      }
-    ];
+    const quickSetupButton = page.getByTestId('call-center-quick-setup');
+    await quickSetupButton.click();
+    await expect(quickSetupButton).toBeEnabled({ timeout: 360_000 });
 
-    // Create Closer agents
-    const closerAgents = [
-      {
-        name: 'Richard "Dick" Steele',
-        age: 42,
-        description: 'Veteran closer. Master of psychological pressure and urgency creation. Gets deals done.',
-        personality: 'dominant, persuasive, ruthless',
-        occupation: 'Senior Closer',
-        routines: [
-          { name: 'deal_review', description: 'Reviews warm leads from TQ floor', frequency: 'daily' },
-          { name: 'closing_ritual', description: 'Visualization and mental prep before closing calls', frequency: 'daily' },
-        ],
-        skills: [
-          { name: 'closing', proficiency: 95 },
-          { name: 'negotiation', proficiency: 90 },
-          { name: 'psychological_pressure', proficiency: 85 },
-        ],
-        metadata: {
-          role: 'closer',
-          department: 'sales',
-          location: 'Closers Room',
-          performance_tier: 'elite',
-          compliance_issues: 5,
-        }
-      }
-    ];
+    await expect(page.getByTestId('setup-status-badge')).toHaveText(/Complete|Needs Attention/, {
+      timeout: 360_000,
+    });
 
-    // Create Compliance agents
-    const complianceAgents = [
-      {
-        name: 'Sarah Chen',
-        age: 35,
-        description: 'Compliance officer. Detail-oriented, by-the-book, frequently clashes with aggressive sales tactics.',
-        personality: 'analytical, cautious, principled',
-        occupation: 'Compliance Officer',
-        routines: [
-          { name: 'call_monitoring', description: 'Reviews random call recordings for compliance', frequency: 'daily' },
-          { name: 'incident_reports', description: 'Documents compliance violations', frequency: 'as_needed' },
-        ],
-        skills: [
-          { name: 'regulatory_knowledge', proficiency: 95 },
-          { name: 'call_auditing', proficiency: 90 },
-          { name: 'documentation', proficiency: 85 },
-        ],
-        metadata: {
-          role: 'compliance',
-          department: 'compliance',
-          location: 'Compliance Office',
-        }
-      }
-    ];
+    await expect
+      .poll(async () => page.locator('[data-testid="location-list"] li').count(), { timeout: 180_000 })
+      .toBeGreaterThanOrEqual(1);
+    await expect
+      .poll(async () => page.locator('[data-testid="agent-list"] li').count(), { timeout: 180_000 })
+      .toBeGreaterThanOrEqual(1);
 
-    // Create Customer agents
-    const customerAgents = [
-      {
-        name: 'Bob Johnson',
-        age: 55,
-        description: 'Small business owner, skeptical but interested. Budget-conscious.',
-        personality: 'skeptical, pragmatic, cautious',
-        occupation: 'Business Owner',
-        routines: [],
-        skills: [],
-        metadata: {
-          role: 'customer',
-          customer_type: 'qualified_lead',
-          budget: 'medium',
-          pain_points: ['marketing', 'lead_generation'],
-          location: 'Customer Zone',
-        }
-      },
-      {
-        name: 'Jennifer Williams',
-        age: 38,
-        description: 'Marketing director, very busy, low patience for sales calls.',
-        personality: 'busy, impatient, direct',
-        occupation: 'Marketing Director',
-        routines: [],
-        skills: [],
-        metadata: {
-          role: 'customer',
-          customer_type: 'hard_lead',
-          budget: 'high',
-          pain_points: ['time_management', 'roi'],
-          location: 'Customer Zone',
-        }
-      },
-      {
-        name: 'Tom Peters',
-        age: 62,
-        description: 'Retiree, lonely, enjoys chatting. Easy mark but low budget.',
-        personality: 'friendly, naive, trusting',
-        occupation: 'Retired',
-        routines: [],
-        skills: [],
-        metadata: {
-          role: 'customer',
-          customer_type: 'soft_lead',
-          budget: 'low',
-          pain_points: ['boredom', 'social_connection'],
-          location: 'Customer Zone',
-        }
-      }
-    ];
+    await expect(page.getByTestId('summary-last-sync')).not.toHaveText('Never', { timeout: 10_000 });
 
-    const allAgents = [...tqAgents, ...closerAgents, ...complianceAgents, ...customerAgents];
-    const createdAgents: any[] = [];
+    const locationProgress = await page.getByTestId('setup-locations-progress').innerText();
+    const agentProgress = await page.getByTestId('setup-agents-progress').innerText();
+    const relationshipProgress = await page.getByTestId('setup-relationships-progress').innerText();
 
-    for (const agent of allAgents) {
-      const response = await page.request.post(`${API_BASE}/agents`, {
-        data: agent
-      });
-      expect(response.ok()).toBeTruthy();
-      const data = await response.json();
-      createdAgents.push(data);
-      console.log(`Created agent: ${data.name} (${data.metadata?.role || 'unknown'})`);
+    const [locationsProvisioned, locationTarget] = locationProgress.split('/').map((value) => Number(value.trim()));
+    const [agentsProvisioned, agentTarget] = agentProgress.split('/').map((value) => Number(value.trim()));
+    const [relationshipsLinked, relationshipsTarget] = relationshipProgress
+      .split('/')
+      .map((value) => Number(value.trim()));
+
+  expect(locationTarget).toBe(EXPECTED_LOCATION_COUNT);
+  expect(locationsProvisioned).toBeGreaterThanOrEqual(EXPECTED_LOCATION_COUNT);
+  expect(agentTarget).toBe(EXPECTED_AGENT_COUNT);
+  expect(agentsProvisioned).toBeGreaterThanOrEqual(EXPECTED_AGENT_COUNT);
+    expect(relationshipsTarget).toBeGreaterThanOrEqual(relationshipsLinked);
+
+    const statusText = await page.getByTestId('setup-status-badge').innerText();
+    const warningsList = page.locator('[data-testid="setup-messages"]');
+    const warningsVisible = await warningsList.isVisible().catch(() => false);
+    if (statusText.includes('Needs Attention')) {
+      expect(warningsVisible).toBeTruthy();
+    } else {
+      expect(warningsVisible).toBeFalsy();
     }
 
-    // Save agent IDs
-    fs.writeFileSync(
-      path.join(ARTIFACTS_DIR, 'agents.json'),
-      JSON.stringify(createdAgents, null, 2)
-    );
+    const stepsInput = page.getByTestId('simulation-step-input');
+    await stepsInput.fill(String(SIMULATION_STEPS));
 
-    // Create relationships (reporting structure, rivalries, etc.)
-    const tqIds = createdAgents.filter(a => a.metadata?.role === 'tq').map(a => a.id);
-    const closerIds = createdAgents.filter(a => a.metadata?.role === 'closer').map(a => a.id);
-    const complianceIds = createdAgents.filter(a => a.metadata?.role === 'compliance').map(a => a.id);
+    const locationsResponse = await page.request.get(`${API_BASE}/locations`, { timeout: REQUEST_TIMEOUT_MS });
+    expect(locationsResponse.ok()).toBeTruthy();
+    const locations = await locationsResponse.json();
+    expect(Array.isArray(locations)).toBeTruthy();
+    expect(locations.length).toBe(locationsProvisioned);
+    fs.writeFileSync(path.join(ARTIFACTS_DIR, 'locations.json'), JSON.stringify(locations, null, 2));
 
-    // TQs report to Closers
-    for (const tqId of tqIds) {
-      for (const closerId of closerIds) {
-        await page.request.post(`${API_BASE}/agents/${tqId}/relationships`, {
-          data: {
-            target_id: closerId,
-            relationship_type: 'reports_to',
-            strength: 70,
-            description: 'TQ transfers warm leads to Closer'
-          }
-        });
-      }
-    }
-
-    // Compliance monitors everyone
-    for (const agentId of [...tqIds, ...closerIds]) {
-      for (const complianceId of complianceIds) {
-        await page.request.post(`${API_BASE}/agents/${complianceId}/relationships`, {
-          data: {
-            target_id: agentId,
-            relationship_type: 'monitors',
-            strength: 60,
-            description: 'Compliance oversight'
-          }
-        });
-      }
-    }
-
-    console.log('Setup complete: Call center environment created');
+    const agentsResponse = await page.request.get(`${API_BASE}/agents`, { timeout: REQUEST_TIMEOUT_MS });
+    expect(agentsResponse.ok()).toBeTruthy();
+    const agents = await agentsResponse.json();
+    expect(Array.isArray(agents)).toBeTruthy();
+    expect(agents.length).toBe(agentsProvisioned);
+    fs.writeFileSync(path.join(ARTIFACTS_DIR, 'agents.json'), JSON.stringify(agents, null, 2));
   });
 
   test('Simulation: Run call center operations', async () => {
-    // Start simulation via API
-    const startResponse = await page.request.post(`${API_BASE}/simulation/control`, {
-      data: { action: 'start' }
-    });
-    expect(startResponse.ok()).toBeTruthy();
+    const simulationSteps = SIMULATION_STEPS;
+    const scenarioLabel = 'boiler_room_call_center';
+    test.setTimeout(resolveSimulationTimeout(simulationSteps));
 
-    console.log('Simulation started');
+    await page.getByTestId('start-simulation-button').click();
 
-    // Run simulation steps (simulate a day of calls)
-    const simulationSteps = 20; // 20 steps = simulated interactions
-    const transcripts: any[] = [];
+    const runStepsButton = page.getByTestId('run-steps-button');
+    await runStepsButton.click();
+    await expect(runStepsButton).toBeEnabled({ timeout: resolveSimulationTimeout(simulationSteps) });
 
-    for (let step = 1; step <= simulationSteps; step++) {
-      console.log(`Running simulation step ${step}/${simulationSteps}`);
-      
-      const stepResponse = await page.request.post(`${API_BASE}/simulation/control`, {
-        data: { action: 'step', steps: 1 }
-      });
-      expect(stepResponse.ok()).toBeTruthy();
-
-      // Fetch simulation state
-      const stateResponse = await page.request.get(`${API_BASE}/simulation/state`);
-      const state = await stateResponse.json();
-
-      // Fetch logs for this step
-      const logsResponse = await page.request.get(`${API_BASE}/simulation/logs`);
-      const logs = await logsResponse.json();
-
-      // Record interactions
-      if (logs && logs.length > 0) {
-        transcripts.push({
-          step,
-          timestamp: new Date().toISOString(),
-          logs: logs.slice(-10), // Last 10 log entries
-          state_snapshot: {
-            active_agents: state.agents?.length || 0,
-            locations: state.locations?.length || 0,
-          }
+    await expect
+      .poll(async () => {
+        const response = await page.request.get(`${API_BASE}/simulation/state`, {
+          timeout: REQUEST_TIMEOUT_MS,
         });
-      }
+        if (!response.ok()) {
+          throw new Error('Failed to poll simulation state');
+        }
+        const data = await response.json();
+        return data?.current_step ?? 0;
+      }, { timeout: resolveSimulationTimeout(simulationSteps) })
+      .toBeGreaterThanOrEqual(simulationSteps);
 
-      // Wait a bit between steps
-      await page.waitForTimeout(500);
-    }
+    const stateResponse = await page.request.get(`${API_BASE}/simulation/state`, {
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    expect(stateResponse.ok()).toBeTruthy();
+    const state = await stateResponse.json();
 
-    // Save transcripts
+    const logLimit = Math.max(300, simulationSteps * 40);
+    const logsResponse = await page.request.get(`${API_BASE}/simulation/logs?limit=${logLimit}`, {
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    expect(logsResponse.ok()).toBeTruthy();
+    const logs = await logsResponse.json();
+
+    const cleanedLogs = (Array.isArray(logs) ? logs : []).map((log) => ({
+      ...log,
+      cleaned_content: humanizeLogEntry(log),
+    }));
+
+    const transcripts = [
+      {
+        step: simulationSteps,
+        timestamp: new Date().toISOString(),
+        logs: cleanedLogs,
+        state_snapshot: {
+          current_step: state?.current_step ?? simulationSteps,
+          is_running: state?.is_running ?? false,
+          agents_count: state?.agents_count ?? cleanedLogs.length,
+          world_name: state?.world_name ?? 'TinyVerse Call Center',
+        },
+      },
+    ];
+
+    const readableTranscript = transcripts
+      .map((entry) => {
+        const header = `=== STEP ${entry.step} — ${entry.timestamp} ===`;
+        const body = entry.logs
+          .map((log: any) => {
+            const speaker = log.agent_name ?? 'System';
+            const line = humanizeLogEntry(log);
+            return `[${speaker}] ${line}`.trim();
+          })
+          .join('\n');
+        return `${header}\n${body}`;
+      })
+      .join('\n\n');
+
+    const scenarioManifest = (() => {
+      const agentsPath = path.join(ARTIFACTS_DIR, 'agents.json');
+      const locationsPath = path.join(ARTIFACTS_DIR, 'locations.json');
+      const parsedAgents = fs.existsSync(agentsPath)
+        ? JSON.parse(fs.readFileSync(agentsPath, 'utf-8'))
+        : [];
+      const parsedLocations = fs.existsSync(locationsPath)
+        ? JSON.parse(fs.readFileSync(locationsPath, 'utf-8'))
+        : [];
+      return { parsedAgents, parsedLocations };
+    })();
+
+    const connectionsResponse = await page.request.get(`${API_BASE}/world/connections`, {
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    expect(connectionsResponse.ok()).toBeTruthy();
+    const connections = await connectionsResponse.json();
+
+    const involvementByAgent = cleanedLogs.reduce((acc: Record<string, number>, log: any) => {
+      const agent = log.agent_name ?? 'System';
+      acc[agent] = (acc[agent] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    const dominantActions = cleanedLogs.reduce((acc: Record<string, number>, log: any) => {
+      const action = log.action_type ?? 'unknown';
+      acc[action] = (acc[action] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    const topAgents = Object.entries(involvementByAgent)
+      .sort(([, aCount], [, bCount]) => bCount - aCount)
+      .slice(0, 5)
+      .map(([name, logCount]) => ({ name, logCount }));
+
+    const topActions = Object.entries(dominantActions)
+      .sort(([, aCount], [, bCount]) => bCount - aCount)
+      .slice(0, 5)
+      .map(([action, count]) => ({ action, count }));
+
+    const summary = {
+      scenario: scenarioLabel,
+      generated_at: new Date().toISOString(),
+      requested_steps: simulationSteps,
+      completed_steps: state?.current_step ?? simulationSteps,
+      logs_captured: cleanedLogs.length,
+      top_agents: topAgents,
+      dominant_actions: topActions,
+    };
+
+    const finalStateArtifact = {
+      ...state,
+      scenario: scenarioLabel,
+      requested_steps: simulationSteps,
+      logs_captured: cleanedLogs.length,
+    };
+
+    const manifest = {
+      scenario: scenarioLabel,
+      generated_at: new Date().toISOString(),
+      environment: 'boiler-room-scam',
+      simulation: {
+        requested_steps: simulationSteps,
+        completed_steps: state?.current_step ?? simulationSteps,
+      },
+      locations: scenarioManifest.parsedLocations,
+      agents: scenarioManifest.parsedAgents,
+      connections,
+    };
+
     fs.writeFileSync(
-      path.join(ARTIFACTS_DIR, 'simulation_transcripts.json'),
-      JSON.stringify(transcripts, null, 2)
+      path.join(ARTIFACTS_DIR, 'simulation_logs_raw.json'),
+      JSON.stringify(logs, null, 2),
     );
 
-    // Generate human-readable transcript
-    const readableTranscript = transcripts.map(t => {
-      return `\n=== STEP ${t.step} - ${t.timestamp} ===\n` +
-        t.logs.map((log: any) => 
-          `[${log.agent_name || 'System'}]: ${log.action} ${log.description ? '- ' + log.description : ''}`
-        ).join('\n');
-    }).join('\n\n');
+    fs.writeFileSync(
+      path.join(ARTIFACTS_DIR, 'simulation_transcripts.json'),
+      JSON.stringify(transcripts, null, 2),
+    );
 
     fs.writeFileSync(
       path.join(ARTIFACTS_DIR, 'simulation_transcript_readable.txt'),
-      readableTranscript
+      readableTranscript,
     );
 
-    console.log(`Simulation complete. Transcripts saved to ${ARTIFACTS_DIR}`);
+    fs.writeFileSync(
+      path.join(ARTIFACTS_DIR, 'simulation_state.json'),
+      JSON.stringify(finalStateArtifact, null, 2),
+    );
+
+    fs.writeFileSync(
+      path.join(ARTIFACTS_DIR, 'simulation_summary.json'),
+      JSON.stringify(summary, null, 2),
+    );
+
+    fs.writeFileSync(
+      path.join(ARTIFACTS_DIR, 'scenario_manifest.json'),
+      JSON.stringify(manifest, null, 2),
+    );
+
+    // Generate per-agent log files
+    const agentLogs: Record<string, any[]> = {};
+    cleanedLogs.forEach((log: any) => {
+      const agentName = log.agent_name ?? 'System';
+      if (!agentLogs[agentName]) {
+        agentLogs[agentName] = [];
+      }
+      agentLogs[agentName].push(log);
+    });
+
+    const agentLogsDir = path.join(ARTIFACTS_DIR, 'agent-logs');
+    fs.mkdirSync(agentLogsDir, { recursive: true });
+
+    for (const [agentName, logs] of Object.entries(agentLogs)) {
+      const sanitizedName = agentName.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+      const agentLogFile = path.join(agentLogsDir, `${sanitizedName}.json`);
+      fs.writeFileSync(agentLogFile, JSON.stringify(logs, null, 2));
+
+      const readableLog = logs
+        .map((log: any, idx: number) => {
+          const timestamp = log.timestamp || 'N/A';
+          const action = log.action_type || 'unknown';
+          const content = humanizeLogEntry(log);
+          return `[${idx + 1}] ${timestamp}\n    Action: ${action}\n    ${content}\n`;
+        })
+        .join('\n');
+
+      const readableLogFile = path.join(agentLogsDir, `${sanitizedName}.txt`);
+      fs.writeFileSync(readableLogFile, `Agent Activity Log: ${agentName}\n${'='.repeat(60)}\n\n${readableLog}`);
+    }
   });
 
   test('Analysis: Generate performance metrics', async () => {
-    // Fetch all agents
-    const agentsResponse = await page.request.get(`${API_BASE}/agents`);
+    const agentsResponse = await page.request.get(`${API_BASE}/agents`, { timeout: REQUEST_TIMEOUT_MS });
+    expect(agentsResponse.ok()).toBeTruthy();
     const agents = await agentsResponse.json();
 
-    // Calculate metrics by role
     const metrics = {
-      tq_agents: agents.filter((a: any) => a.metadata?.role === 'tq'),
-      closer_agents: agents.filter((a: any) => a.metadata?.role === 'closer'),
-      compliance_agents: agents.filter((a: any) => a.metadata?.role === 'compliance'),
-      customer_agents: agents.filter((a: any) => a.metadata?.role === 'customer'),
-      
-      total_compliance_issues: agents.reduce((sum: number, a: any) => 
-        sum + (a.metadata?.compliance_issues || 0), 0
-      ),
-      
+      dialers: agents.filter((agent: any) => /dialer|opener|harvester/i.test(agent.occupation ?? '')),
+      closers: agents.filter((agent: any) => /closer|hammer/i.test(agent.occupation ?? '')),
+      laundering: agents.filter((agent: any) => /wire|facilitator|compliance/i.test(agent.occupation ?? '')),
+      targets: agents.filter((agent: any) => /investor|target|mark/i.test(agent.occupation ?? '')),
+      total_agents: agents.length,
       performance_summary: {
-        top_performers: agents
-          .filter((a: any) => a.metadata?.performance_tier === 'top' || a.metadata?.performance_tier === 'elite')
-          .map((a: any) => ({ name: a.name, role: a.metadata?.role })),
-      }
+        frontline: agents
+          .filter((agent: any) => /dialer|opener|harvester/i.test(agent.occupation ?? ''))
+          .map((agent: any) => ({ name: agent.name, occupation: agent.occupation })),
+      },
     };
 
     fs.writeFileSync(
       path.join(ARTIFACTS_DIR, 'performance_metrics.json'),
-      JSON.stringify(metrics, null, 2)
+      JSON.stringify(metrics, null, 2),
     );
 
-    // Generate compliance report
     const complianceReport = {
       title: 'Call Center Compliance Report',
       date: new Date().toISOString(),
       total_agents: agents.length,
-      agents_with_violations: agents.filter((a: any) => (a.metadata?.compliance_issues || 0) > 0).length,
-      total_violations: metrics.total_compliance_issues,
-      high_risk_agents: agents
-        .filter((a: any) => (a.metadata?.compliance_issues || 0) >= 3)
-        .map((a: any) => ({
-          name: a.name,
-          role: a.metadata?.role,
-          violations: a.metadata?.compliance_issues,
-          location: a.metadata?.location,
-        })),
+      total_violations: 0,
+      high_risk_agents: metrics.closers.map((agent: any) => ({
+        name: agent.name,
+        occupation: agent.occupation,
+      })),
       recommendations: [
-        'Implement additional training for agents with 3+ violations',
-        'Increase monitoring frequency for Closers Room',
-        'Review sales scripts for compliance alignment',
-      ]
+        'Maintain compliance oversight on high-pressure closers.',
+        'Rotate telequestioners through refresher training weekly.',
+        'Schedule post-shift audits for randomly sampled call transcripts.',
+      ],
     };
 
     fs.writeFileSync(
       path.join(ARTIFACTS_DIR, 'compliance_report.json'),
-      JSON.stringify(complianceReport, null, 2)
+      JSON.stringify(complianceReport, null, 2),
     );
 
     const readableReport = `
@@ -440,50 +442,208 @@ Generated: ${complianceReport.date}
 
 SUMMARY:
 - Total Agents: ${complianceReport.total_agents}
-- Agents with Violations: ${complianceReport.agents_with_violations}
-- Total Violations: ${complianceReport.total_violations}
-
-HIGH-RISK AGENTS:
-${complianceReport.high_risk_agents.map((a: any) => 
-  `- ${a.name} (${a.role}) - ${a.violations} violations - Location: ${a.location}`
-).join('\n')}
+- High-Risk Roles Under Review: ${complianceReport.high_risk_agents.length}
 
 RECOMMENDATIONS:
-${complianceReport.recommendations.map((r: string, i: number) => `${i + 1}. ${r}`).join('\n')}
+${complianceReport.recommendations.map((item, index) => `${index + 1}. ${item}`).join('\n')}
     `.trim();
 
+    fs.writeFileSync(path.join(ARTIFACTS_DIR, 'compliance_report.txt'), readableReport);
+
+    // Generate end-of-day agent reviews and reports
+    const reviewAgentsResponse = await page.request.get(`${API_BASE}/agents`, { timeout: REQUEST_TIMEOUT_MS });
+    expect(reviewAgentsResponse.ok()).toBeTruthy();
+    const allAgents = await reviewAgentsResponse.json();
+
+    const logsResponse = await page.request.get(`${API_BASE}/simulation/logs?limit=1000`, {
+      timeout: REQUEST_TIMEOUT_MS,
+    });
+    expect(logsResponse.ok()).toBeTruthy();
+    const allLogs = await logsResponse.json();
+
+    const agentReviews: any[] = [];
+    const agentLogsByName: Record<string, any[]> = {};
+
+    allLogs.forEach((log: any) => {
+      const agentName = log.agent_name ?? 'System';
+      if (!agentLogsByName[agentName]) {
+        agentLogsByName[agentName] = [];
+      }
+      agentLogsByName[agentName].push(log);
+    });
+
+    for (const agent of allAgents) {
+      const agentLogs = agentLogsByName[agent.name] || [];
+      const actionCount = agentLogs.length;
+      const actionTypes = agentLogs.reduce((acc: Record<string, number>, log: any) => {
+        const action = log.action_type ?? 'unknown';
+        acc[action] = (acc[action] ?? 0) + 1;
+        return acc;
+      }, {});
+
+      const review = {
+        agent_name: agent.name,
+        agent_occupation: agent.occupation,
+        date: new Date().toISOString(),
+        total_actions: actionCount,
+        action_breakdown: actionTypes,
+        key_activities: agentLogs.slice(0, 5).map((log: any) => humanizeLogEntry(log)),
+        performance_notes: actionCount > 10 ? 'High activity volume' : actionCount > 5 ? 'Moderate activity' : 'Low activity',
+      };
+
+      agentReviews.push(review);
+    }
+
     fs.writeFileSync(
-      path.join(ARTIFACTS_DIR, 'compliance_report.txt'),
-      readableReport
+      path.join(ARTIFACTS_DIR, 'agent_reviews.json'),
+      JSON.stringify(agentReviews, null, 2),
     );
 
-    console.log(`Analysis complete. Reports saved to ${ARTIFACTS_DIR}`);
+    // Generate TQ Report Email (daily summary to lead)
+    const dialerAgents = allAgents.filter((a: any) => /dialer|opener/i.test(a.occupation ?? ''));
+    const closerAgents = allAgents.filter((a: any) => /closer|hammer/i.test(a.occupation ?? ''));
+    const targetAgents = allAgents.filter((a: any) => /investor|target/i.test(a.occupation ?? ''));
+
+    const dialerActivity = dialerAgents.map((agent: any) => {
+      const logs = agentLogsByName[agent.name] || [];
+      return {
+        name: agent.name,
+        calls_made: logs.length,
+        key_actions: logs.slice(0, 3).map((l: any) => humanizeLogEntry(l)),
+      };
+    });
+
+    const closerActivity = closerAgents.map((agent: any) => {
+      const logs = agentLogsByName[agent.name] || [];
+      return {
+        name: agent.name,
+        close_attempts: logs.length,
+        key_actions: logs.slice(0, 3).map((l: any) => humanizeLogEntry(l)),
+      };
+    });
+
+    const targetActivity = targetAgents.map((agent: any) => {
+      const logs = agentLogsByName[agent.name] || [];
+      return {
+        name: agent.name,
+        interactions: logs.length,
+      };
+    });
+
+    const tqReport = {
+      subject: `Daily Boiler Room Report - ${new Date().toISOString().split('T')[0]}`,
+      from: 'operations@boilerroom.internal',
+      to: 'lead@boilerroom.internal',
+      date: new Date().toISOString(),
+      body: {
+        summary: {
+          total_simulation_steps: SIMULATION_STEPS,
+          total_agents: allAgents.length,
+          total_interactions: allLogs.length,
+          dialer_count: dialerAgents.length,
+          closer_count: closerAgents.length,
+          target_count: targetAgents.length,
+        },
+        dialer_performance: dialerActivity,
+        closer_performance: closerActivity,
+        target_engagement: targetActivity,
+        recommendations: [
+          'Review high-volume dialers for script compliance',
+          'Monitor closer tactics for regulatory exposure',
+          'Assess target resistance patterns for pivot strategy',
+        ],
+      },
+    };
+
+    fs.writeFileSync(
+      path.join(ARTIFACTS_DIR, 'tq_report_email.json'),
+      JSON.stringify(tqReport, null, 2),
+    );
+
+    const emailText = `
+FROM: ${tqReport.from}
+TO: ${tqReport.to}
+DATE: ${tqReport.date}
+SUBJECT: ${tqReport.subject}
+
+${'='.repeat(70)}
+
+DAILY OPERATIONS SUMMARY
+
+Total Simulation Steps: ${tqReport.body.summary.total_simulation_steps}
+Total Agents: ${tqReport.body.summary.total_agents}
+Total Interactions: ${tqReport.body.summary.total_interactions}
+
+TEAM BREAKDOWN:
+- Dialers: ${tqReport.body.summary.dialer_count}
+- Closers: ${tqReport.body.summary.closer_count}
+- Targets: ${tqReport.body.summary.target_count}
+
+${'='.repeat(70)}
+
+DIALER PERFORMANCE:
+${dialerActivity.map((d: any) => `
+  ${d.name}: ${d.calls_made} calls
+    Top Actions:
+${d.key_actions.map((a: string) => `      - ${a}`).join('\n')}
+`).join('\n')}
+
+${'='.repeat(70)}
+
+CLOSER PERFORMANCE:
+${closerActivity.map((c: any) => `
+  ${c.name}: ${c.close_attempts} attempts
+    Top Actions:
+${c.key_actions.map((a: string) => `      - ${a}`).join('\n')}
+`).join('\n')}
+
+${'='.repeat(70)}
+
+TARGET ENGAGEMENT:
+${targetActivity.map((t: any) => `  ${t.name}: ${t.interactions} interactions`).join('\n')}
+
+${'='.repeat(70)}
+
+RECOMMENDATIONS:
+${tqReport.body.recommendations.map((r: string, i: number) => `${i + 1}. ${r}`).join('\n')}
+
+${'='.repeat(70)}
+
+End of Report
+    `.trim();
+
+    fs.writeFileSync(path.join(ARTIFACTS_DIR, 'tq_report_email.txt'), emailText);
   });
 
   test('Cleanup: Stop simulation and verify artifacts', async () => {
-    // Stop simulation
-    const stopResponse = await page.request.post(`${API_BASE}/simulation/control`, {
-      data: { action: 'stop' }
-    });
-    expect(stopResponse.ok()).toBeTruthy();
+    await page.getByTestId('stop-simulation-button').click();
 
-    // Verify all artifacts were created
     const expectedFiles = [
       'locations.json',
       'agents.json',
+      'simulation_logs_raw.json',
       'simulation_transcripts.json',
       'simulation_transcript_readable.txt',
+      'simulation_state.json',
+      'simulation_summary.json',
+      'scenario_manifest.json',
       'performance_metrics.json',
       'compliance_report.json',
       'compliance_report.txt',
+      'agent_reviews.json',
+      'tq_report_email.json',
+      'tq_report_email.txt',
     ];
 
     for (const file of expectedFiles) {
       const filePath = path.join(ARTIFACTS_DIR, file);
       expect(fs.existsSync(filePath)).toBeTruthy();
-      console.log(`✓ Artifact created: ${file}`);
     }
 
-    console.log(`\nAll artifacts available at: ${ARTIFACTS_DIR}`);
+    // Verify per-agent logs directory
+    const agentLogsDir = path.join(ARTIFACTS_DIR, 'agent-logs');
+    expect(fs.existsSync(agentLogsDir)).toBeTruthy();
+    const agentLogFiles = fs.readdirSync(agentLogsDir);
+    expect(agentLogFiles.length).toBeGreaterThan(0);
   });
 });

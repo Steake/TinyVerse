@@ -33,7 +33,7 @@ class OpenAIClient:
     def _setup_from_config(self):
         pass
 
-def register_client(client):
+def register_client(api_type, client):
     pass
 
 def force_api_type(api_type):

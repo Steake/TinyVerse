@@ -76,6 +76,8 @@ async def delete_location(location_id: str):
 
 
 @router.get("/connections", response_model=List[Connection])
+@router.get("/world/connections", response_model=List[Connection])
+@router.get("/api/world/connections", response_model=List[Connection])
 async def list_connections():
     """
     List all connections.
@@ -93,6 +95,8 @@ async def list_connections():
 
 
 @router.post("/connections", response_model=Connection, status_code=status.HTTP_201_CREATED)
+@router.post("/world/connections", response_model=Connection, status_code=status.HTTP_201_CREATED)
+@router.post("/api/world/connections", response_model=Connection, status_code=status.HTTP_201_CREATED)
 async def create_connection(connection: ConnectionCreate):
     """
     Create a new connection.
@@ -108,8 +112,9 @@ async def create_connection(connection: ConnectionCreate):
             detail=f"Failed to create connection: {str(e)}"
         )
 
-
 @router.delete("/connections/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/world/connections/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/api/world/connections/{connection_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_connection(connection_id: str):
     """
     Delete a connection.

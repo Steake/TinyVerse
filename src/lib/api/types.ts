@@ -1,4 +1,8 @@
-import type { Agent, Location, Connection, SimulationLog } from '../stores/types';
+import type {
+  Agent,
+  Location,
+  Connection,
+} from '../stores/types';
 
 export interface ApiResponse<T> {
   data: T;
@@ -47,3 +51,82 @@ export interface LogFilters {
   limit?: number;
   offset?: number;
 }
+
+export interface SimulationLogDTO {
+  timestamp: string | Date;
+  agent_id?: string;
+  agent_name?: string;
+  action_type?: string;
+  content?: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface SimulationStateDTO {
+  is_running: boolean;
+  current_step: number;
+  agents_count: number;
+  world_name: string;
+}
+
+export interface SimulationControlResponseDTO {
+  message: string;
+  state: SimulationStateDTO;
+}
+
+export interface FacultyAssignPayload {
+  key: string;
+  parameters?: Record<string, unknown>;
+  activate?: boolean;
+}
+
+export interface FacultyUpdatePayload {
+  parameters?: Record<string, unknown>;
+  activate?: boolean;
+}
+
+export interface ToolAssignPayload {
+  key: string;
+  parameters?: Record<string, unknown>;
+}
+
+export interface ToolUpdatePayload {
+  parameters?: Record<string, unknown>;
+}
+
+export interface EpisodicMemoryParams {
+  first_n?: number;
+  last_n?: number;
+  item_type?: string;
+  include_omission_info?: boolean;
+}
+
+export interface SemanticMemoryParams {
+  limit?: number;
+  item_type?: string;
+}
+
+export interface SemanticMemoryQueryPayload {
+  query: string;
+  top_k?: number;
+}
+
+export interface SemanticMemorySummaryPayload {
+  query: string;
+  batch_size?: number;
+}
+
+export interface SemanticMemoryIngestPayload {
+  text?: string;
+  url?: string;
+  document_name?: string;
+}
+
+export interface AutofillRequestPayload {
+  form: 'agent' | 'location';
+  context?: string;
+  seed?: Record<string, unknown>;
+}
+
+export type AutofillResponsePayload =
+  | { form: 'agent'; data: Agent }
+  | { form: 'location'; data: Location };

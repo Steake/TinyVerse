@@ -15,7 +15,7 @@
     <p>{agent.occupation}</p>
     <p>{agent.nationality}</p>
     <p class="text-xs mt-2">
-      {agent.personalityTraits.join(', ')}
+      {(agent.personality_traits ?? []).join(', ')}
     </p>
   </div>
 </div>

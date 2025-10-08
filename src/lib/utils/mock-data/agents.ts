@@ -6,9 +6,9 @@ export const mockAgents: Agent[] = [
     name: 'Emma Chen',
     age: 28,
     occupation: 'Software Engineer',
-    occupationDescription: 'Full-stack developer specializing in AI and web technologies',
+    occupation_description: 'Full-stack developer specializing in AI and web technologies',
     nationality: 'Chinese-Canadian',
-    countryOfResidence: 'Canada',
+    country_of_residence: 'Canada',
     routines: [
       {
         id: 'routine-1',
@@ -25,9 +25,9 @@ export const mockAgents: Agent[] = [
         duration: 60
       }
     ],
-    personalityTraits: ['analytical', 'creative', 'ambitious'],
-    professionalInterests: ['artificial intelligence', 'web development', 'cloud computing'],
-    personalInterests: ['photography', 'hiking', 'piano'],
+    personality_traits: ['analytical', 'creative', 'ambitious'],
+    professional_interests: ['artificial intelligence', 'web development', 'cloud computing'],
+    personal_interests: ['photography', 'hiking', 'piano'],
     skills: [
       { name: 'JavaScript', level: 5 },
       { name: 'Python', level: 4 },
@@ -61,9 +61,9 @@ export const mockAgents: Agent[] = [
     name: 'Marcus Rodriguez',
     age: 35,
     occupation: 'UX Designer',
-    occupationDescription: 'Senior UX designer focusing on user research and interaction design',
+    occupation_description: 'Senior UX designer focusing on user research and interaction design',
     nationality: 'Mexican',
-    countryOfResidence: 'Canada',
+    country_of_residence: 'Canada',
     routines: [
       {
         id: 'routine-3',
@@ -73,9 +73,9 @@ export const mockAgents: Agent[] = [
         duration: 90
       }
     ],
-    personalityTraits: ['empathetic', 'observant', 'collaborative'],
-    professionalInterests: ['user research', 'interaction design', 'accessibility'],
-    personalInterests: ['sketching', 'salsa dancing', 'cooking'],
+    personality_traits: ['empathetic', 'observant', 'collaborative'],
+    professional_interests: ['user research', 'interaction design', 'accessibility'],
+    personal_interests: ['sketching', 'salsa dancing', 'cooking'],
     skills: [
       { name: 'Figma', level: 5 },
       { name: 'User Research', level: 4 },
@@ -109,9 +109,9 @@ export const mockAgents: Agent[] = [
     name: 'Aisha Patel',
     age: 31,
     occupation: 'Product Manager',
-    occupationDescription: 'Leading product strategy and development for AI-powered solutions',
+    occupation_description: 'Leading product strategy and development for AI-powered solutions',
     nationality: 'Indian',
-    countryOfResidence: 'Canada',
+    country_of_residence: 'Canada',
     routines: [
       {
         id: 'routine-4',
@@ -121,9 +121,9 @@ export const mockAgents: Agent[] = [
         duration: 120
       }
     ],
-    personalityTraits: ['strategic', 'diplomatic', 'energetic'],
-    professionalInterests: ['product strategy', 'team leadership', 'agile methodologies'],
-    personalInterests: ['hiking', 'yoga', 'travel photography'],
+    personality_traits: ['strategic', 'diplomatic', 'energetic'],
+    professional_interests: ['product strategy', 'team leadership', 'agile methodologies'],
+    personal_interests: ['hiking', 'yoga', 'travel photography'],
     skills: [
       { name: 'Product Strategy', level: 5 },
       { name: 'Agile Management', level: 4 },
@@ -157,9 +157,9 @@ export const mockAgents: Agent[] = [
     name: 'David Chen',
     age: 40,
     occupation: 'Engineering Manager',
-    occupationDescription: 'Leading the AI and machine learning engineering teams',
+    occupation_description: 'Leading the AI and machine learning engineering teams',
     nationality: 'Canadian',
-    countryOfResidence: 'Canada',
+    country_of_residence: 'Canada',
     routines: [
       {
         id: 'routine-5',
@@ -169,9 +169,9 @@ export const mockAgents: Agent[] = [
         duration: 45
       }
     ],
-    personalityTraits: ['competitive', 'perfectionist', 'ambitious'],
-    professionalInterests: ['team leadership', 'AI architecture', 'performance optimization'],
-    personalInterests: ['chess', 'mountain biking', 'wine tasting'],
+    personality_traits: ['competitive', 'perfectionist', 'ambitious'],
+    professional_interests: ['team leadership', 'AI architecture', 'performance optimization'],
+    personal_interests: ['chess', 'mountain biking', 'wine tasting'],
     skills: [
       { name: 'Team Leadership', level: 5 },
       { name: 'System Architecture', level: 5 },
@@ -205,9 +205,9 @@ export const mockAgents: Agent[] = [
     name: 'Sarah Rodriguez',
     age: 33,
     occupation: 'Data Scientist',
-    occupationDescription: 'Specializing in machine learning and predictive analytics',
+    occupation_description: 'Specializing in machine learning and predictive analytics',
     nationality: 'Canadian',
-    countryOfResidence: 'Canada',
+    country_of_residence: 'Canada',
     routines: [
       {
         id: 'routine-6',
@@ -217,9 +217,9 @@ export const mockAgents: Agent[] = [
         duration: 120
       }
     ],
-    personalityTraits: ['analytical', 'patient', 'detail-oriented'],
-    professionalInterests: ['machine learning', 'data visualization', 'statistical analysis'],
-    personalInterests: ['gardening', 'cooking', 'classical music'],
+    personality_traits: ['analytical', 'patient', 'detail-oriented'],
+    professional_interests: ['machine learning', 'data visualization', 'statistical analysis'],
+    personal_interests: ['gardening', 'cooking', 'classical music'],
     skills: [
       { name: 'Python', level: 5 },
       { name: 'Machine Learning', level: 5 },

@@ -10,28 +10,27 @@
     warning: '⚠'
   };
 
-  const colorMap = {
-    success: 'alert-success',
-    error: 'alert-error',
-    info: 'alert-info',
-    warning: 'alert-warning'
+  const typeMap = {
+    success: 'toast-success',
+    error: 'toast-danger',
+    info: 'toast-info',
+    warning: 'toast-warning'
   };
 </script>
 
-<div class="toast toast-end toast-top z-50">
+<div class="toast-container">
   {#each $toastStore as toast (toast.id)}
     <div
-      class="alert {colorMap[toast.type]} shadow-lg"
+      class="toast {typeMap[toast.type]}"
       transition:fly={{ y: -20, duration: 300 }}
       animate:flip={{ duration: 300 }}
     >
-      <div class="flex items-center gap-2">
-        <span class="text-xl font-bold">{iconMap[toast.type]}</span>
-        <span>{toast.message}</span>
-      </div>
+      <span class="text-xl font-bold">{iconMap[toast.type]}</span>
+      <span class="flex-1">{toast.message}</span>
       <button
-        class="btn btn-sm btn-ghost"
+        class="btn-ghost btn-sm"
         on:click={() => toastStore.dismiss(toast.id)}
+        aria-label="Dismiss notification"
       >
         ✕
       </button>
@@ -40,7 +39,14 @@
 </div>
 
 <style>
-  .toast {
+  .toast-container {
+    position: fixed;
+    top: var(--space-lg);
+    right: var(--space-lg);
+    z-index: var(--z-toast);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
     max-width: 400px;
   }
 </style>

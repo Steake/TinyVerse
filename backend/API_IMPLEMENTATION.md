@@ -104,12 +104,6 @@ python -m pytest tests/test_api.py -v
 
 ## Starting the Server
 
-### With Mock TinyTroupe (for development)
-```bash
-cd backend
-python start_mock.py
-```
-
 ### With Real TinyTroupe
 ```bash
 cd backend

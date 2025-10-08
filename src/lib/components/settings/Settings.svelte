@@ -144,46 +144,40 @@
 <div class="container mx-auto p-6 max-w-4xl">
   <div class="mb-6">
     <h1 class="text-3xl font-bold mb-2">⚙️ Settings</h1>
-    <p class="text-base-content/70">Configure OpenAI API settings and TinyTroupe parameters</p>
+    <p class="text-secondary">Configure OpenAI API settings and TinyTroupe parameters</p>
   </div>
   
   {#if loading}
     <div class="flex items-center justify-center py-12">
-      <span class="loading loading-spinner loading-lg"></span>
+      <span class="loading"></span>
     </div>
   {:else}
     <div class="card bg-base-200 shadow-xl">
       <div class="card-body">
-        <!-- Tabs -->
-        <div class="tabs tabs-boxed mb-6">
+        <!-- Button group for tabs -->
+        <div style="display:flex; gap: var(--space-sm); margin-bottom: var(--space-lg);">
           <button
-            class="tab {activeTab === 'openai' ? 'tab-active' : ''}"
+            class="btn {activeTab === 'openai' ? 'btn-primary' : 'btn-secondary'}"
             on:click={() => activeTab = 'openai'}
-          >
-            OpenAI
-          </button>
+            type="button"
+          >OpenAI</button>
           <button
-            class="tab {activeTab === 'azure' ? 'tab-active' : ''}"
+            class="btn {activeTab === 'azure' ? 'btn-primary' : 'btn-secondary'}"
             on:click={() => activeTab = 'azure'}
-          >
-            Azure OpenAI
-          </button>
+            type="button"
+          >Azure OpenAI</button>
         </div>
         
         {#if error}
-          <div class="alert alert-error mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <div class="card" style="border-left: 3px solid var(--color-accent-danger); margin-bottom: var(--space-md); display:flex; align-items:center; gap: var(--space-sm);">
+            <span class="text-danger">⚠</span>
             <span>{error}</span>
           </div>
         {/if}
         
         {#if successMessage}
-          <div class="alert alert-success mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <div class="card" style="border-left: 3px solid var(--color-accent-success); margin-bottom: var(--space-md); display:flex; align-items:center; gap: var(--space-sm);">
+            <span>✅</span>
             <span>{successMessage}</span>
           </div>
         {/if}
@@ -192,94 +186,100 @@
           {#if activeTab === 'openai'}
             <!-- OpenAI Configuration -->
             <div class="form-control">
-              <label class="label">
+              <label class="label" for="openaiApiKey">
                 <span class="label-text font-semibold">OpenAI API Key</span>
                 {#if config.openai_api_key}
                   <span class="label-text-alt badge badge-success badge-sm">Configured</span>
                 {/if}
               </label>
               <input
+                id="openaiApiKey"
                 type="password"
                 placeholder="sk-..."
                 bind:value={formData.openai_api_key}
                 class="input input-bordered w-full"
               />
-              <label class="label">
+              <div class="label" role="note">
                 <span class="label-text-alt">
                   {config.openai_api_key ? `Current: ${config.openai_api_key}` : 'Not configured'}
                 </span>
                 <span class="label-text-alt">Leave empty to keep current key</span>
-              </label>
+              </div>
             </div>
             
             <div class="form-control">
-              <label class="label">
+              <label class="label" for="openaiBaseUrl">
                 <span class="label-text font-semibold">Custom Base URL (Optional)</span>
                 {#if config.api_base_configured}
                   <span class="label-text-alt badge badge-info badge-sm">Custom URL Active</span>
                 {/if}
               </label>
               <input
+                id="openaiBaseUrl"
                 type="text"
                 placeholder="https://api.openai.com/v1 or custom endpoint"
                 bind:value={formData.openai_api_base_url}
                 class="input input-bordered w-full"
               />
-              <label class="label">
+              <div class="label" role="note">
                 <span class="label-text-alt">
                   Leave empty to use default OpenAI endpoint
                 </span>
-              </label>
+              </div>
             </div>
           {:else}
             <!-- Azure OpenAI Configuration -->
             <div class="form-control">
-              <label class="label">
+              <label class="label" for="azureApiKey">
                 <span class="label-text font-semibold">Azure OpenAI API Key</span>
                 {#if config.azure_openai_key}
                   <span class="label-text-alt badge badge-success badge-sm">Configured</span>
                 {/if}
               </label>
               <input
+                id="azureApiKey"
                 type="password"
                 placeholder="Your Azure OpenAI key"
                 bind:value={formData.azure_openai_key}
                 class="input input-bordered w-full"
               />
-              <label class="label">
+              <div class="label" role="note">
                 <span class="label-text-alt">
                   {config.azure_openai_key ? `Current: ${config.azure_openai_key}` : 'Not configured'}
                 </span>
                 <span class="label-text-alt">Leave empty to keep current key</span>
-              </label>
+              </div>
             </div>
             
             <div class="form-control">
-              <label class="label">
+              <label class="label" for="azureEndpoint">
                 <span class="label-text font-semibold">Azure OpenAI Endpoint</span>
               </label>
               <input
+                id="azureEndpoint"
                 type="text"
                 placeholder="https://your-resource.openai.azure.com/"
                 bind:value={formData.azure_openai_endpoint}
                 class="input input-bordered w-full"
               />
-              <label class="label">
+              <div class="label" role="note">
                 <span class="label-text-alt">
                   Your Azure OpenAI resource endpoint
                 </span>
-              </label>
+              </div>
             </div>
           {/if}
           
           <!-- TinyTroupe Configuration -->
-          <div class="divider">TinyTroupe Settings</div>
+          <hr />
+          <h2 class="text-xl font-semibold mt-md">TinyTroupe Settings</h2>
           
           <div class="form-control">
-            <label class="label">
+            <label class="label" for="modelSelect">
               <span class="label-text font-semibold">Model</span>
             </label>
             <select
+              id="modelSelect"
               bind:value={formData.tinytroupe_model}
               class="select select-bordered w-full"
             >
@@ -289,39 +289,40 @@
               <option value="gpt-4">GPT-4</option>
               <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
             </select>
-            <label class="label">
+            <div class="label" role="note">
               <span class="label-text-alt">
                 Model used by TinyTroupe for agent simulation
               </span>
-            </label>
+            </div>
           </div>
           
           <div class="form-control">
-            <label class="label">
+            <label class="label" for="temperatureRange">
               <span class="label-text font-semibold">Temperature: {formData.tinytroupe_temperature}</span>
             </label>
             <input
+              id="temperatureRange"
               type="range"
               min="0"
               max="2"
               step="0.1"
               bind:value={formData.tinytroupe_temperature}
-              class="range range-primary"
+              class="w-full"
             />
-            <div class="w-full flex justify-between text-xs px-2 mt-1">
+            <div style="width: 100%; display:flex; justify-content: space-between; font-size: var(--text-xs); padding: 0 var(--space-sm); margin-top: var(--space-xs);">
               <span>Focused (0)</span>
               <span>Balanced (1)</span>
               <span>Creative (2)</span>
             </div>
-            <label class="label">
+            <div class="label" role="note">
               <span class="label-text-alt">
                 Controls randomness in agent responses
               </span>
-            </label>
+            </div>
           </div>
           
           <!-- Action Buttons -->
-          <div class="card-actions justify-end mt-6">
+          <div style="display:flex; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-lg);">
             <button
               type="button"
               class="btn btn-ghost"
@@ -336,7 +337,6 @@
               disabled={saving}
             >
               {#if saving}
-                <span class="loading loading-spinner"></span>
                 Saving...
               {:else}
                 Save Configuration
@@ -344,17 +344,6 @@
             </button>
           </div>
         </form>
-        
-        <!-- Info Panel -->
-        <div class="mt-6 p-4 bg-info/10 rounded-lg">
-          <h3 class="font-semibold mb-2">💡 Configuration Tips</h3>
-          <ul class="list-disc list-inside space-y-1 text-sm">
-            <li>Changes take effect immediately without restarting the server</li>
-            <li>Use custom base URLs for OpenAI-compatible APIs (e.g., LocalAI, OpenRouter)</li>
-            <li>API keys are securely stored and masked in the interface</li>
-            <li>Settings are persisted to your .env file</li>
-          </ul>
-        </div>
       </div>
     </div>
   {/if}

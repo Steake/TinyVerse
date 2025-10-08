@@ -18,7 +18,10 @@ const createAgentStore = () => {
         loadingStore.start('agents:fetch');
         const response = await api.getAgents();
         if (response.data) {
-          set(response.data);
+          set(response.data.map(agent => ({
+            ...agent,
+            relationships: agent.relationships || []
+          })));
         }
       } catch (error) {
         console.error('Failed to fetch agents:', error);
@@ -93,12 +96,61 @@ const createAgentStore = () => {
       return foundAgent;
     },
     
-    addRelationship: (agentId: string, relationship: Relationship) => update(agents =>
-      agents.map(a => a.id === agentId ? {
-        ...a,
-        relationships: [...(a.relationships || []), relationship]
-      } : a)
-    ),
+    addRelationship: async (agentId: string, relationship: Relationship) => {
+      try {
+        loadingStore.start(`agents:relationship:add:${agentId}`);
+        const response = await api.addRelationship(agentId, relationship);
+
+        if (response.data) {
+          update(agents =>
+            agents.map(a =>
+              a.id === agentId
+                ? {
+                    ...a,
+                    ...response.data,
+                    relationships: response.data.relationships || []
+                  }
+                : a
+            )
+          );
+          toastStore.success('Relationship saved successfully');
+        }
+
+        return response.data;
+      } catch (error) {
+        console.error('Failed to save relationship:', error);
+        toastStore.error('Failed to save relationship');
+        throw error;
+      } finally {
+        loadingStore.stop(`agents:relationship:add:${agentId}`);
+      }
+    },
+
+    removeRelationship: async (agentId: string, targetId: string) => {
+      try {
+        loadingStore.start(`agents:relationship:remove:${agentId}`);
+        await api.removeRelationship(agentId, targetId);
+
+        update(agents =>
+          agents.map(a =>
+            a.id === agentId
+              ? {
+                  ...a,
+                  relationships: (a.relationships || []).filter(rel => rel.targetId !== targetId)
+                }
+              : a
+          )
+        );
+
+        toastStore.success('Relationship removed successfully');
+      } catch (error) {
+        console.error('Failed to remove relationship:', error);
+        toastStore.error('Failed to remove relationship');
+        throw error;
+      } finally {
+        loadingStore.stop(`agents:relationship:remove:${agentId}`);
+      }
+    },
     
     // Bulk import agents
     importAgents: async (file: File) => {

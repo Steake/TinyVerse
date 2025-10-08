@@ -66,16 +66,11 @@
   <div class="flex-1 overflow-auto">
     {#if showForm}
       <div class="max-w-2xl mx-auto bg-base-100 p-6 m-6 rounded-lg shadow-lg">
-        <div class="flex justify-between items-center mb-6">
+        <div class="mb-6">
           <h3 class="text-xl font-semibold">
             {isEditing ? 'Edit Agent' : 'Add New Agent'}
           </h3>
-          <button 
-            class="btn btn-ghost btn-sm"
-            on:click={handleCancel}
-          >
-            ← Back
-          </button>
+          <p class="text-sm opacity-70">Use the LLM autofill button inside the form to generate a full persona instantly.</p>
         </div>
         <AgentForm 
           agent={editingAgent} 

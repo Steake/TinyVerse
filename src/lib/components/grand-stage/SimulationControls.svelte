@@ -3,21 +3,19 @@
   import { simulationStore } from '../../stores/simulation';
 
   let animationFrameId: number;
-  let lastTime = performance.now();
 
-  function animate(currentTime: number) {
+  function animate() {
     if ($simulationStore.isRunning) {
-      const deltaTime = currentTime - lastTime;
-      lastTime = currentTime;
-      simulationStore.tick(deltaTime);
+      simulationStore.tick();
     }
     animationFrameId = requestAnimationFrame(animate);
   }
 
   onMount(() => {
-    simulationStore.reset();
-    lastTime = performance.now();
     animationFrameId = requestAnimationFrame(animate);
+    simulationStore.refresh().catch(error => {
+      console.error('Failed to refresh simulation state', error);
+    });
   });
 
   onDestroy(() => {
@@ -30,13 +28,37 @@
     const value = parseFloat((event.target as HTMLInputElement).value);
     simulationStore.setSpeed(value);
   }
+
+  async function handleStart() {
+    try {
+      await simulationStore.start();
+    } catch (error) {
+      console.error('Start simulation failed', error);
+    }
+  }
+
+  async function handlePause() {
+    try {
+      await simulationStore.pause();
+    } catch (error) {
+      console.error('Pause simulation failed', error);
+    }
+  }
+
+  async function handleStep() {
+    try {
+      await simulationStore.step();
+    } catch (error) {
+      console.error('Step simulation failed', error);
+    }
+  }
 </script>
 
-<div class="flex items-center gap-4">
-  <div class="flex items-center gap-2">
+<div class="flex items-center gap-md">
+  <div class="flex items-center gap-sm">
     <button
-      class="btn btn-circle btn-sm"
-      on:click={() => simulationStore.step()}
+      class="btn-secondary btn-icon"
+      on:click={handleStep}
       disabled={$simulationStore.isRunning}
       aria-label="Step forward"
     >
@@ -45,16 +67,16 @@
 
     {#if $simulationStore.isRunning}
       <button
-        class="btn btn-circle btn-sm btn-primary"
-        on:click={() => simulationStore.pause()}
+        class="btn-primary btn-icon"
+        on:click={handlePause}
         aria-label="Pause simulation"
       >
         ⏸️
       </button>
     {:else}
       <button
-        class="btn btn-circle btn-sm btn-primary"
-        on:click={() => simulationStore.start()}
+        class="btn-primary btn-icon"
+        on:click={handleStart}
         aria-label="Start simulation"
       >
         ▶️
@@ -62,20 +84,20 @@
     {/if}
   </div>
 
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-sm">
     <span class="text-sm">Speed:</span>
-    <div class="join">
+    <div class="flex items-center gap-xs">
       <input
         type="range"
         min="0.1"
         max="5"
         step="0.1"
         value={$simulationStore.speed}
-        class="range range-xs join-item"
         on:input={handleSpeedChange}
         aria-label="Simulation speed"
+        style="width: 120px;"
       />
-      <span class="join-item px-2 bg-base-200 text-sm">
+      <span class="badge badge-neutral">
         {$simulationStore.speed}x
       </span>
     </div>

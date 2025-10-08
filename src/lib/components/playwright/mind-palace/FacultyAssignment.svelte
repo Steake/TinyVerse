@@ -1,39 +1,34 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import type { Agent } from '../../../stores/agents';
-  import type { MentalFaculty } from '../../../stores/faculties';
+  import type { MentalFacultyDefinition } from '../../../stores/types';
   import { agentStore } from '../../../stores/agents';
-  import { facultyStore } from '../../../stores/faculties';
 
   export let selectedAgent: Agent | null = null;
+  export let facultyDefinitions: MentalFacultyDefinition[] = [];
 
   const dispatch = createEventDispatcher<{
-    assign: { agentId: string; facultyId: string };
+    assign: { agentId: string; facultyKey: string };
   }>();
 
   let agents: Agent[] = [];
-  let faculties: MentalFaculty[] = [];
 
   agentStore.subscribe(value => {
     agents = value;
   });
 
-  facultyStore.subscribe(value => {
-    faculties = value;
-  });
-
-  function handleDragStart(event: DragEvent, faculty: MentalFaculty) {
+  function handleDragStart(event: DragEvent, faculty: MentalFacultyDefinition) {
     if (event.dataTransfer) {
-      event.dataTransfer.setData('faculty-id', faculty.id);
+      event.dataTransfer.setData('faculty-key', faculty.key);
       event.dataTransfer.effectAllowed = 'copy';
     }
   }
 
   function handleDrop(event: DragEvent, agent: Agent) {
     event.preventDefault();
-    const facultyId = event.dataTransfer?.getData('faculty-id');
-    if (facultyId) {
-      dispatch('assign', { agentId: agent.id, facultyId });
+    const facultyKey = event.dataTransfer?.getData('faculty-key');
+    if (facultyKey) {
+      dispatch('assign', { agentId: agent.id, facultyKey });
     }
   }
 
@@ -49,14 +44,22 @@
   <div>
     <h3 class="text-lg font-semibold mb-4">Available Faculties</h3>
     <div class="space-y-4">
-      {#each faculties as faculty}
+      {#if facultyDefinitions.length === 0}
+        <div class="p-4 bg-base-200 rounded-lg text-xs opacity-70">
+          No faculties available. Add them from the Faculties tab first.
+        </div>
+      {/if}
+      {#each facultyDefinitions as faculty (faculty.key)}
         <div
-          class="card bg-base-200 cursor-move"
+          class="card bg-base-200 cursor-grab"
           draggable="true"
           on:dragstart={(e) => handleDragStart(e, faculty)}
         >
           <div class="card-body p-4">
-            <h4 class="card-title text-sm">{faculty.name}</h4>
+            <h4 class="card-title text-sm flex items-center justify-between">
+              <span>{faculty.name}</span>
+              <span class="badge badge-outline badge-sm uppercase">{faculty.type}</span>
+            </h4>
             <p class="text-xs opacity-70">{faculty.description}</p>
           </div>
         </div>

@@ -9,6 +9,8 @@
   import CriticsCorner from './lib/components/critics-corner/CriticsCorner.svelte';
   import Settings from './lib/components/settings/Settings.svelte';
   import ToastContainer from './lib/components/common/ToastContainer.svelte';
+  import GlobalAutofillBar from './lib/components/common/GlobalAutofillBar.svelte';
+  import { runGlobalAutofill } from './lib/stores/autofill';
   import { api } from './lib/api';
   import { wsService } from './lib/services/websocket';
 
@@ -43,43 +45,53 @@
     console.error('Error:', error);
     error = 'An error occurred';
   }
+
+  // Default handler: runs generic scope; feature screens can pass their own onApply
+  async function handleGlobalApply() {
+    // Try a generic prompt; specific pages/components can run scoped fills
+    await runGlobalAutofill('generic');
+  }
 </script>
 
-<main class="flex h-screen bg-base-100 text-base-content">
+<main style="display: flex; flex-direction: row; height: 100vh; background-color: var(--color-bg-app);">
   <Sidebar bind:activeSection />
   
-  <div class="flex-1 overflow-hidden flex flex-col">
+  <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background-color: var(--color-bg-primary);">
     {#if !apiInitialized}
-      <div class="flex items-center justify-center h-full">
+      <div class="flex items-center justify-center" style="height: 100%;">
         <p>Initializing API...</p>
       </div>
     {:else if error}
-      <div class="flex items-center justify-center h-full">
-        <p>{error}</p>
+      <div class="flex items-center justify-center" style="height: 100%;">
+        <p class="text-danger">{error}</p>
       </div>
     {:else if activeSection === 'playwright-desk'}
-      <div class="bg-base-200 p-4 shadow-xl">
-        <div class="tabs tabs-boxed">
+      <header style="background-color: var(--color-bg-secondary); border-bottom: 1px solid var(--color-border-subtle);">
+        <div class="flex gap-xs p-md">
           <button
-            class="tab {activeTab === 'world-builder' ? 'tab-active' : ''}"
+            class="btn-secondary {activeTab === 'world-builder' ? 'btn-primary' : ''}"
             on:click={() => handleTabChange('world-builder')}
           >World Builder</button>
           <button
-            class="tab {activeTab === 'casting-call' ? 'tab-active' : ''}"
+            class="btn-secondary {activeTab === 'casting-call' ? 'btn-primary' : ''}"
             on:click={() => handleTabChange('casting-call')}
           >Casting Call</button>
           <button
-            class="tab {activeTab === 'relationship-network' ? 'tab-active' : ''}"
+            class="btn-secondary {activeTab === 'relationship-network' ? 'btn-primary' : ''}"
             on:click={() => handleTabChange('relationship-network')}
           >Relationship Network</button>
           <button
-            class="tab {activeTab === 'mind-palace' ? 'tab-active' : ''}"
+            class="btn-secondary {activeTab === 'mind-palace' ? 'btn-primary' : ''}"
             on:click={() => handleTabChange('mind-palace')}
           >Mind Palace</button>
         </div>
+      </header>
+
+      <div class="p-md" style="border-bottom:1px solid var(--color-border-subtle); background: var(--color-bg-primary);">
+        <GlobalAutofillBar onApply={handleGlobalApply} />
       </div>
 
-  <div class="flex-1 overflow-auto">
+  <div style="flex: 1; overflow: auto; background-color: var(--color-bg-primary);">
     {#if activeTab === 'world-builder'}
       <WorldBuilder />
     {:else if activeTab === 'casting-call'}
