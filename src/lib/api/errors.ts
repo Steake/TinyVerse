@@ -18,21 +18,27 @@ export class ApiError extends Error {
     );
   }
 
-  static networkError(error: Error): ApiError {
+  static networkError(error: Error, details: Record<string, any> = {}): ApiError {
     return new ApiError(
       'NETWORK_ERROR',
       'Network request failed',
       undefined,
-      { originalError: error.message }
+      {
+        originalError: error.message,
+        ...details
+      }
     );
   }
 
-  static timeoutError(timeout: number): ApiError {
+  static timeoutError(timeout: number, details: Record<string, any> = {}): ApiError {
     return new ApiError(
       'TIMEOUT',
       `Request timed out after ${timeout}ms`,
       undefined,
-      { timeout }
+      {
+        timeout,
+        ...details
+      }
     );
   }
 }

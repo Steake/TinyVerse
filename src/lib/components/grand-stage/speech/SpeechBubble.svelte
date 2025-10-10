@@ -33,9 +33,9 @@
   });
 
   // Calculate bubble dimensions based on text length
-  $: lines = text.split('\n');
-  $: bubbleWidth = Math.min(maxWidth, Math.max(...lines.map(line => line.length * 8)));
-  $: bubbleHeight = lines.length * 20 + 20;
+  $: lines = (text ?? '').toString().split('\n');
+  $: bubbleWidth = Math.max(60, Math.min(maxWidth, Math.max(...lines.map(line => line.length * 8))));
+  $: bubbleHeight = Math.max(28, lines.length * 20 + 20);
 </script>
 
 <g
@@ -56,7 +56,8 @@
       Q0,${bubbleHeight} 0,${bubbleHeight - 10}
       Z
     `}
-    class="fill-white stroke-base-300"
+    class="stroke-base-300"
+    style="fill: hsl(var(--b1)); filter: drop-shadow(0 2px 6px rgba(0,0,0,0.2));"
     stroke-width="2"
   />
   
@@ -66,6 +67,7 @@
     y="4"
     text-anchor="middle"
     class="text-sm fill-base-content"
+    style="paint-order: stroke fill; stroke: rgba(0,0,0,0.25); stroke-width: 1px;"
   >
     {#each lines as line, i}
       <tspan x={bubbleWidth / 2} dy={i === 0 ? '1em' : '1.2em'}>
@@ -79,10 +81,7 @@
     class="tts-button"
     transform={`translate(${bubbleWidth - 24}, 8)`}
   >
-    <circle
-      r="8"
-      class="fill-base-200 hover:fill-base-300 cursor-pointer"
-    />
+    <circle r="8" class="fill-base-200 hover:fill-base-300 cursor-pointer" />
     <text
       y="1"
       text-anchor="middle"

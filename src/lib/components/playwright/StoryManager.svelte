@@ -1,39 +1,60 @@
-// Import necessary components and APIs
-import { api } from '../../../api';
-
-// Define the StoryManager component
 <script lang="ts">
-  async function createStory(story: any) {
-    try {
-      const response = await api.story.createStory(story);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating story:', error);
-      throw new Error('Failed to create story. Please try again later.');
-    }
+  import { api } from '../../api';
+
+  const SAMPLE_STORY = {
+    id: 'sample-story',
+    title: 'New Story',
+    synopsis: 'Auto-generated sample story'
+  } as const;
+
+  async function createStory(payload: Omit<typeof SAMPLE_STORY, 'id'>) {
+    const response = await api?.story?.createStory?.(payload);
+    return response ?? null;
   }
 
-  async function updateStory(story: any) {
-    try {
-      const response = await api.story.updateStory(story);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating story:', error);
-      throw new Error('Failed to update story. Please try again later.');
-    }
+  async function updateStory(id: string, payload: Omit<typeof SAMPLE_STORY, 'id'>) {
+    const response = await api?.story?.updateStory?.(id, payload);
+    return response ?? null;
   }
 
   async function listStories() {
+    const response = await api?.story?.getStories?.();
+    return response ?? [];
+  }
+
+  async function handleCreate() {
     try {
-      const response = await api.story.listStories();
-      return response.data;
+  await createStory({ title: SAMPLE_STORY.title, synopsis: SAMPLE_STORY.synopsis });
+    } catch (error) {
+      console.error('Error creating story:', error);
+    }
+  }
+
+  async function handleUpdate() {
+    try {
+  await updateStory(SAMPLE_STORY.id, { title: SAMPLE_STORY.title, synopsis: SAMPLE_STORY.synopsis });
+    } catch (error) {
+      console.error('Error updating story:', error);
+    }
+  }
+
+  async function handleList() {
+    try {
+      await listStories();
     } catch (error) {
       console.error('Error listing stories:', error);
-      throw new Error('Failed to list stories. Please try again later.');
     }
   }
 </script>
 
-<button on:click={createStory}>Create Story</button>
-<button on:click={updateStory}>Update Story</button>
-<button on:click={listStories}>List Stories</button>
+<div class="flex gap-2">
+  <button type="button" class="btn btn-primary" on:click={handleCreate}>
+    Create Story
+  </button>
+  <button type="button" class="btn btn-secondary" on:click={handleUpdate}>
+    Update Story
+  </button>
+  <button type="button" class="btn" on:click={handleList}>
+    List Stories
+  </button>
+</div>

@@ -12,7 +12,7 @@ export const defaultRetryConfig: RetryConfig = {
   shouldRetry: (error: Error) => {
     if (error instanceof ApiError) {
       return error.code === 'NETWORK_ERROR' || 
-             (error.status && error.status >= 500);
+             (!!error.status && error.status >= 500);
     }
     return false;
   }

@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import type { Location, Connection } from './types';
+import type { FloorplanDefinition } from '../utils/world/floorplan';
 import { api } from '../api';
 import { toastStore } from './toast';
 import { loadingStore } from './loading';
@@ -184,6 +185,27 @@ function createWorldStore() {
       } finally {
         loadingStore.stop('world:simulation:fetch');
       }
+    },
+
+    seedWorld: (locations: Location[], connections: Connection[]) => {
+      update(state => ({
+        ...state,
+        locations,
+        connections
+      }));
+    },
+
+    applyFloorplan: (floorplan: FloorplanDefinition) => {
+      update(state => ({
+        ...state,
+        locations: floorplan.locations,
+        connections: floorplan.connections,
+        simulationState: {
+          ...(state.simulationState ?? {}),
+          floorplanName: floorplan.name
+        }
+      }));
+      return floorplan;
     }
   };
 }

@@ -4,7 +4,6 @@ import type {
   UpdateAgentRequest,
   AgentObservationResponse
 } from '../types/agent';
-import { API } from '../../api';
 import { API_ENDPOINTS } from '../endpoints';
 import { BaseAPI } from './BaseAPI';
 

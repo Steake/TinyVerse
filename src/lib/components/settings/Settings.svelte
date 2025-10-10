@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { API_ENDPOINTS } from '../../api/endpoints';
+  import BaseModal from '../common/BaseModal.svelte';
+  import { toastStore } from '../../stores/toast';
   
   interface Config {
     openai_api_key: string;
@@ -34,11 +36,35 @@
   let loading = false;
   let saving = false;
   let error = '';
-  let successMessage = '';
   let activeTab: 'openai' | 'azure' = 'openai';
+
+  // Reset modal state
+  let showResetModal = false;
+  let resetBusy = false;
+
+  // Backend state readout
+  type SimState = {
+    is_running: boolean;
+    current_step: number;
+    agents_count: number;
+    world_name: string;
+  };
+  let simState: SimState | null = null;
   
+  let simPoll: number | null = null;
   onMount(async () => {
-    await loadConfig();
+    await Promise.all([loadConfig(), loadSimState()]);
+    // Start lightweight polling to keep state accurate during runs
+    simPoll = window.setInterval(loadSimState, 3000);
+  });
+  // Best-effort cleanup when component is destroyed
+  // (Svelte will ignore if not in DOM lifecycle)
+  // @ts-ignore
+  onDestroy?.(() => {
+    if (simPoll) {
+      clearInterval(simPoll);
+      simPoll = null;
+    }
   });
   
   async function loadConfig() {
@@ -46,7 +72,7 @@
     error = '';
     
     try {
-      const response = await fetch(`http://localhost:8000${API_ENDPOINTS.CONFIG}`);
+  const response = await fetch(`${API_ENDPOINTS.CONFIG}`);
       
       if (!response.ok) {
         throw new Error(`Failed to load configuration: ${response.statusText}`);
@@ -62,15 +88,26 @@
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to load configuration';
       console.error('Config load error:', e);
+      toastStore.error(error);
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadSimState() {
+    try {
+  const res = await fetch(`${API_ENDPOINTS.SIMULATION_STATE}`);
+      if (res.ok) {
+        simState = await res.json();
+      }
+    } catch (e) {
+      console.warn('Failed to fetch simulation state', e);
     }
   }
   
   async function saveConfig() {
     saving = true;
     error = '';
-    successMessage = '';
     
     try {
       // Only include fields that have been modified
@@ -95,7 +132,7 @@
         updates.tinytroupe_temperature = formData.tinytroupe_temperature;
       }
       
-      const response = await fetch(`http://localhost:8000${API_ENDPOINTS.CONFIG}`, {
+  const response = await fetch(`${API_ENDPOINTS.CONFIG}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -109,19 +146,15 @@
       }
       
       config = await response.json();
-      successMessage = 'Configuration saved successfully!';
+      toastStore.success('Configuration saved successfully');
       
       // Clear sensitive input fields after successful save
       formData.openai_api_key = '';
       formData.azure_openai_key = '';
-      
-      // Auto-clear success message after 3 seconds
-      setTimeout(() => {
-        successMessage = '';
-      }, 3000);
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save configuration';
       console.error('Config save error:', e);
+      toastStore.error(error);
     } finally {
       saving = false;
     }
@@ -137,7 +170,30 @@
       tinytroupe_temperature: config.tinytroupe_temperature
     };
     error = '';
-    successMessage = '';
+  }
+
+  async function confirmReset() {
+    resetBusy = true;
+  error = '';
+    try {
+      const res = await fetch(`${API_ENDPOINTS.ADMIN_RESET}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `Reset failed: ${res.status} ${res.statusText}`);
+      }
+      toastStore.success('Backend state reset successfully');
+      await loadSimState();
+      showResetModal = false;
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Reset failed';
+      toastStore.error(error);
+    } finally {
+      resetBusy = false;
+    }
   }
 </script>
 
@@ -145,6 +201,37 @@
   <div class="mb-6">
     <h1 class="text-3xl font-bold mb-2">⚙️ Settings</h1>
     <p class="text-secondary">Configure OpenAI API settings and TinyTroupe parameters</p>
+  </div>
+
+  <!-- Backend state readout -->
+  <div class="grid gap-4 grid-cols-1 md:grid-cols-2 mb-6">
+    <div class="card bg-base-200">
+      <div class="card-body">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-lg font-semibold">Backend State</h2>
+          <button class="btn btn-xs btn-ghost" type="button" on:click={loadSimState}>Refresh</button>
+        </div>
+        {#if simState}
+          <ul class="text-sm space-y-1">
+            <li><strong>World:</strong> {simState.world_name}</li>
+            <li><strong>Agents:</strong> {simState.agents_count}</li>
+            <li><strong>Step:</strong> {simState.current_step}</li>
+            <li><strong>Status:</strong> {simState.is_running ? 'Running' : 'Paused'}</li>
+          </ul>
+        {:else}
+          <p class="text-sm text-secondary">No state available</p>
+        {/if}
+      </div>
+    </div>
+    <div class="card bg-base-200">
+      <div class="card-body">
+        <h2 class="text-lg font-semibold mb-2">Quick Actions</h2>
+        <p class="text-sm text-secondary mb-3">Hard reset backend memory, DB rows, and logs via admin endpoint.</p>
+        <button type="button" class="btn btn-error" on:click={() => (showResetModal = true)}>
+          Reset Simulation
+        </button>
+      </div>
+    </div>
   </div>
   
   {#if loading}
@@ -168,19 +255,7 @@
           >Azure OpenAI</button>
         </div>
         
-        {#if error}
-          <div class="card" style="border-left: 3px solid var(--color-accent-danger); margin-bottom: var(--space-md); display:flex; align-items:center; gap: var(--space-sm);">
-            <span class="text-danger">⚠</span>
-            <span>{error}</span>
-          </div>
-        {/if}
-        
-        {#if successMessage}
-          <div class="card" style="border-left: 3px solid var(--color-accent-success); margin-bottom: var(--space-md); display:flex; align-items:center; gap: var(--space-sm);">
-            <span>✅</span>
-            <span>{successMessage}</span>
-          </div>
-        {/if}
+        <!-- Inline banners removed; using footer toasts instead -->
         
         <form on:submit|preventDefault={saveConfig} class="space-y-6">
           {#if activeTab === 'openai'}
@@ -275,23 +350,19 @@
           <h2 class="text-xl font-semibold mt-md">TinyTroupe Settings</h2>
           
           <div class="form-control">
-            <label class="label" for="modelSelect">
+            <label class="label" for="modelInput">
               <span class="label-text font-semibold">Model</span>
             </label>
-            <select
-              id="modelSelect"
+            <input
+              id="modelInput"
+              type="text"
+              placeholder="e.g., gpt-4o-mini, deepseek-reasoner, local:my-llm"
               bind:value={formData.tinytroupe_model}
-              class="select select-bordered w-full"
-            >
-              <option value="gpt-4o-mini">GPT-4o Mini (Recommended)</option>
-              <option value="gpt-4o">GPT-4o</option>
-              <option value="gpt-4-turbo">GPT-4 Turbo</option>
-              <option value="gpt-4">GPT-4</option>
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-            </select>
+              class="input input-bordered w-full"
+            />
             <div class="label" role="note">
               <span class="label-text-alt">
-                Model used by TinyTroupe for agent simulation
+                Free text. Supports custom providers and local IDs.
               </span>
             </div>
           </div>
@@ -347,6 +418,17 @@
       </div>
     </div>
   {/if}
+
+    <!-- Confirmation Modal -->
+    <BaseModal bind:show={showResetModal} title="Confirm Reset">
+      <p>You're about to clear all agents, locations, connections, and logs. This cannot be undone.</p>
+      <div class="modal-action">
+        <button class="btn btn-ghost" type="button" on:click={() => (showResetModal = false)} disabled={resetBusy}>Cancel</button>
+        <button class="btn btn-error" type="button" on:click={confirmReset} disabled={resetBusy}>
+          {#if resetBusy}Resetting...{:else}Confirm Reset{/if}
+        </button>
+      </div>
+    </BaseModal>
 </div>
 
 <style>

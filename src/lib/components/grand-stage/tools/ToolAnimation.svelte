@@ -10,7 +10,11 @@
   let element: SVGGElement;
   let timeline: gsap.core.Timeline;
 
-  const animations = {
+  const animations: Record<'write' | 'calendar' | 'custom', {
+    icon: string;
+    duration: number;
+    create: (target: SVGElement) => gsap.core.Timeline;
+  }> = {
     write: {
       icon: '✍️',
       duration: 2,
@@ -60,6 +64,32 @@
             scale: 0,
             duration: 0.3,
             delay: 0.5,
+            onComplete
+          })
+    },
+    custom: {
+      icon: '🛠️',
+      duration: 1.2,
+      create: (target: SVGElement) =>
+        gsap.timeline()
+          .from(target, {
+            opacity: 0,
+            scale: 0.5,
+            duration: 0.3,
+            ease: 'back.out(1.7)'
+          })
+          .to(target, {
+            scale: 1.1,
+            rotation: 10,
+            duration: 0.4,
+            yoyo: true,
+            repeat: 1
+          })
+          .to(target, {
+            opacity: 0,
+            scale: 0.5,
+            rotation: 0,
+            duration: 0.3,
             onComplete
           })
     }

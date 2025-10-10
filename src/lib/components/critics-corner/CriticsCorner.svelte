@@ -2,7 +2,6 @@
   import ResultsExtractor from './ResultsExtractor.svelte';
   import DataVisualizer from './DataVisualizer.svelte';
   import StoryGenerator from './StoryGenerator.svelte';
-  import { simulationStore } from '../../stores/simulation';
 
   let activeTab: 'results' | 'visualization' | 'story' = 'results';
 </script>

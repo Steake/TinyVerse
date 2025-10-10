@@ -42,6 +42,13 @@ export const mockLogs: SimulationLog[] = [
       "I love the new color scheme!"
     ][i % 5],
     metadata: {
+      message: [
+        "Let's review the latest design updates.",
+        "How's the new feature coming along?",
+        "Great progress on the UI!",
+        "Should we schedule a team meeting?",
+        "I love the new color scheme!"
+      ][i % 5],
       rawContent: {
         message: [
           "Let's review the latest design updates.",
@@ -71,6 +78,7 @@ export const mockLogs: SimulationLog[] = [
           }
         }
       : {
+          message: "Let's discuss the project timeline.",
           rawContent: {
             message: "Let's discuss the project timeline."
           }
@@ -100,6 +108,13 @@ export const mockLogs: SimulationLog[] = [
           }
         }
       : {
+          message: [
+            'Great idea!',
+            "Let's collaborate on this.",
+            "I'll help with that.",
+            'When should we meet?',
+            'The results look promising!'
+          ][i % 5],
           rawContent: {
             message: [
               'Great idea!',

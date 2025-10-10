@@ -6,6 +6,8 @@
   import GroupContainer from './GroupContainer.svelte';
   import SortSelector from './SortSelector.svelte';
 
+  export let search: string = '';
+
   const dispatch = createEventDispatcher<{
     edit: Agent;
   }>();
@@ -17,7 +19,18 @@
     agents = value;
   });
 
-  $: groupedAgents = groupAgents(agents, $groupStore);
+  $: filtered = filterAgents(agents, search);
+  $: groupedAgents = groupAgents(filtered, $groupStore);
+
+  function filterAgents(list: Agent[], q: string) {
+    const term = (q || '').toLowerCase().trim();
+    if (!term) return list;
+    return list.filter(a =>
+      (a.name || '').toLowerCase().includes(term) ||
+      (a.occupation || '').toLowerCase().includes(term) ||
+      (a.personality_traits || []).join(' ').toLowerCase().includes(term)
+    );
+  }
 
   function groupAgents(agents: Agent[], groups: typeof $groupStore) {
     const grouped = new Map();
@@ -66,4 +79,11 @@
   {#each groupedAgents as { group, agents } (group?.id ?? 'ungrouped')}
     <GroupContainer {group} {agents} on:edit />
   {/each}
+
+  {#if groupedAgents.every(g => g.agents.length === 0)}
+    <div class="text-center text-base-content/60 py-12">
+      <div class="text-lg font-semibold">No agents match your search</div>
+      <div class="text-sm">Try a different term or clear the filter.</div>
+    </div>
+  {/if}
 </div>

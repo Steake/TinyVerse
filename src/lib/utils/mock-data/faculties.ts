@@ -3,10 +3,13 @@ import type { MentalFaculty } from '../../stores/types';
 export const mockFaculties: MentalFaculty[] = [
   {
     id: 'memory-recall',
+    agent_id: 'mock-agent-1',
+    key: 'memory_recall',
     name: 'Memory Recall',
     description: 'Ability to access and utilize past experiences',
     type: 'memory',
-    isActive: true,
+    is_active: true,
+    created_at: '2024-01-01T00:00:00.000Z',
     parameters: [
       {
         id: 'lookback-length',
@@ -32,10 +35,13 @@ export const mockFaculties: MentalFaculty[] = [
   },
   {
     id: 'local-grounding',
+    agent_id: 'mock-agent-1',
+    key: 'local_grounding',
     name: 'Local Grounding',
     description: 'Awareness of current environment and context',
     type: 'grounding',
-    isActive: true,
+    is_active: true,
+    created_at: '2024-01-02T00:00:00.000Z',
     parameters: [
       {
         id: 'perception-radius',

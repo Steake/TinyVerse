@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { stageStore } from '../../stores/stage';
   import type { StageState } from '../../utils/mock-data/grand-stage';
 
@@ -8,14 +8,15 @@
   let weather: StageState['weather'];
   let time: Date;
 
-  stageStore.subscribe(state => {
+  const unsubscribe = stageStore.subscribe(state => {
     weather = state.weather;
     time = state.time;
-    if (ctx) updateBackground();
+    if (ctx && canvas) updateBackground();
   });
 
   onMount(() => {
     ctx = canvas.getContext('2d')!;
+    if (!canvas) return;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
@@ -27,7 +28,9 @@
       }
     });
 
-    resizeObserver.observe(canvas.parentElement!);
+    if (canvas?.parentElement) {
+      resizeObserver.observe(canvas.parentElement);
+    }
     updateBackground();
 
     return () => {
@@ -35,8 +38,14 @@
     };
   });
 
+  onDestroy(() => {
+    unsubscribe?.();
+  });
+
   function updateBackground() {
-    const { width, height } = canvas;
+    if (!canvas || !ctx || !time) return;
+    const width = canvas.width ?? 0;
+    const height = canvas.height ?? 0;
     const hour = time.getHours();
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
 
@@ -73,7 +82,8 @@
   }
 
   function addRainEffect() {
-    const { width, height } = canvas;
+  if (!canvas || !ctx) return;
+  const { width, height } = canvas;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
     for (let i = 0; i < 100; i++) {
       const x = Math.random() * width;
@@ -83,7 +93,8 @@
   }
 
   function addCloudEffect() {
-    const { width, height } = canvas;
+  if (!canvas || !ctx) return;
+  const { width, height } = canvas;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
     for (let i = 0; i < 5; i++) {
       const x = Math.random() * width;
@@ -96,7 +107,8 @@
   }
 
   function addSunEffect() {
-    const { width, height } = canvas;
+  if (!canvas || !ctx) return;
+  const { width, height } = canvas;
     const x = width * 0.8;
     const y = height * 0.2;
     const radius = 50;

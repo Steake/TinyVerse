@@ -24,6 +24,9 @@ passlib[bcrypt]>=1.7.4
 # Environment
 python-dotenv>=1.0.0
 
+# JSON repair utility
+json-repair>=0.4.2
+
 # Testing (development)
 pytest>=7.4.0
 pytest-asyncio>=0.21.0

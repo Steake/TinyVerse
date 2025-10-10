@@ -7,6 +7,9 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    environmentMatchGlobs: [
+      ['src/test/setupWizardStore.test.ts', 'node']
+    ],
     include: ['src/**/*.{test,spec}.{js,ts}'],
   },
   resolve: {

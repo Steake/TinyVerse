@@ -6,9 +6,10 @@
   import { toastStore } from '../../../stores/toast';
   import RichTextEditor from '../../common/RichTextEditor.svelte';
   import { autofillStore, runGlobalAutofill, applyFields } from '../../../stores/autofill';
+  import { promptStore } from '../../../stores/prompts';
   import AutofillButton from '../../common/AutofillButton.svelte';
   import { autofill } from '../../../actions/autofill';
-  import { get } from 'svelte/store';
+  import { derived, get } from 'svelte/store';
 
   export let agent: Partial<Agent> = {
     personality_traits: [],
@@ -36,6 +37,37 @@
   let isAutofilling = false;
   // Seed used by per-field autofill buttons
   let seed: Record<string, unknown> = {};
+  let agentAutofillPrompt = '';
+  let agentPromptTouched = false;
+  const lastAgentResult = derived(autofillStore, ($s) => $s.lastResults.agent);
+  $: metadataEntries = (() => {
+    const payload = $lastAgentResult;
+    if (!payload || typeof payload !== 'object') return [] as Array<[string, unknown]>;
+    const meta = (payload as any).metadata ?? (payload as any).meta;
+    if (!meta || typeof meta !== 'object') return [] as Array<[string, unknown]>;
+    return Object.entries(meta as Record<string, unknown>);
+  })();
+
+  function prettifyLabel(label: string): string {
+    return label
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  function renderMetadataValue(value: unknown): string {
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
+        .join(', ');
+    }
+    if (value && typeof value === 'object') {
+      return JSON.stringify(value, null, 2);
+    }
+    if (value === null || value === undefined || value === '') {
+      return '—';
+    }
+    return String(value);
+  }
 
   onMount(() => {
     mounted = true;
@@ -46,6 +78,14 @@
   $: if (!creatingGroup) {
     selectedGroup = agent.group ?? '';
     previousGroup = agent.group ?? undefined;
+  }
+
+  $: baseAgentPrompt = agent.occupation
+    ? `Persona for ${agent.occupation}`
+    : 'Persona details';
+  $: defaultAgentPrompt = `${baseAgentPrompt}. Include a rich backstory paragraph as HTML.`;
+  $: if (!agentPromptTouched) {
+    agentAutofillPrompt = defaultAgentPrompt;
   }
 
   function buildSeedPayload() {
@@ -138,18 +178,24 @@
       isAutofilling = true;
       const seed = buildSeedPayload();
       // If user provided a top-level prompt, use the global pipeline; else fall back to API call
-      const hasGlobal = get(autofillStore).globalPrompt.trim().length > 0;
+  const hasGlobal = get(promptStore).master.prompt.trim().length > 0;
       let payload: any;
       if (hasGlobal) {
-        payload = await runGlobalAutofill('agent', seed);
+        const response = await runGlobalAutofill('agent', seed);
+        payload = Array.isArray(response) ? response[0] : response;
       } else {
-        const base = agent.occupation ? `Persona for ${agent.occupation}` : 'Persona details';
-        const context = `${base}. Include a rich backstory paragraph as HTML.`;
+        const context = agentAutofillPrompt.trim() || defaultAgentPrompt;
         const response = await api.autofill({ form: 'agent', context, seed });
         payload = response.data;
       }
 
       if (payload) {
+        if (!hasGlobal) {
+          autofillStore.update((state) => ({
+            ...state,
+            lastResults: { ...state.lastResults, agent: payload }
+          }));
+        }
         agent = applyFields(agent as any, 'agent', payload) as typeof agent;
         agent = {
           ...agent,
@@ -287,6 +333,16 @@
 
     dispatch('save', completeAgent);
   }
+
+  function handleAgentPromptInput(event: Event) {
+    agentAutofillPrompt = (event.target as HTMLTextAreaElement).value;
+    agentPromptTouched = true;
+  }
+
+  function resetAgentPrompt() {
+    agentPromptTouched = false;
+    agentAutofillPrompt = defaultAgentPrompt;
+  }
 </script>
 
 {#if mounted}
@@ -307,6 +363,42 @@
       <button type="button" class="btn btn-ghost btn-sm" on:click={() => dispatch('cancel')}>
         ← Back
       </button>
+    </div>
+  </div>
+
+  {#if metadataEntries.length}
+    <div class="agent-metadata" role="region" aria-label="Latest agent metadata">
+      <header>
+        <strong>Latest agent metadata</strong>
+        <span class="hint">Refreshed from the global blueprint.</span>
+      </header>
+      <dl>
+        {#each metadataEntries as [key, value]}
+          <div>
+            <dt>{prettifyLabel(key)}</dt>
+            <dd>{renderMetadataValue(value)}</dd>
+          </div>
+        {/each}
+      </dl>
+    </div>
+  {/if}
+
+  <div class="form-control">
+    <label class="label" for="agent-autofill-prompt">
+      <span class="label-text">Autofill prompt</span>
+      <span class="label-text-alt">Used when no global prompt is set</span>
+    </label>
+    <textarea
+      id="agent-autofill-prompt"
+      class="textarea textarea-bordered"
+      rows="3"
+      bind:value={agentAutofillPrompt}
+      on:input={handleAgentPromptInput}
+      placeholder="Describe the persona to generate rich agent details"
+    />
+    <div class="label" role="note">
+      <span class="label-text-alt">Defaults update as you edit occupation details.</span>
+      <button type="button" class="btn btn-ghost btn-xs" on:click={resetAgentPrompt}>Reset</button>
     </div>
   </div>
 
@@ -618,3 +710,45 @@
   </div>
 </form>
 {/if}
+
+<style>
+  .agent-metadata {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 12px;
+    background: var(--color-bg-elevated, rgba(15, 23, 42, 0.45));
+  }
+
+  .agent-metadata header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .agent-metadata .hint {
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+  }
+
+  .agent-metadata dl {
+    display: grid;
+    grid-template-columns: minmax(120px, 180px) 1fr;
+    gap: 0.35rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .agent-metadata dt {
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .agent-metadata dd {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--color-text-primary);
+  }
+</style>

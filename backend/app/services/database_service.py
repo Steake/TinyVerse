@@ -151,6 +151,21 @@ class DatabaseService:
         
         return query.order_by(SimulationEvent.timestamp.desc()).limit(limit).all()
 
+    @staticmethod
+    def clear_all(db: Session) -> None:
+        """Delete all data from all tables we manage.
+
+        Order matters due to FKs and relationships.
+        """
+        # Delete events first (FK to runs)
+        db.query(SimulationEvent).delete()
+        db.query(SimulationRun).delete()
+        # Delete skills before agents
+        db.query(SkillModel).delete()
+        db.query(AgentModel).delete()
+        db.query(LocationModel).delete()
+        db.commit()
+
 
 # Singleton instance
 db_service = DatabaseService()

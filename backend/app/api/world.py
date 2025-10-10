@@ -3,7 +3,11 @@ World API endpoints for locations and connections.
 """
 from fastapi import APIRouter, HTTPException, status
 from typing import List
-from app.schemas import Location, LocationCreate, LocationUpdate, Connection, ConnectionCreate
+from app.schemas import (
+    Location, LocationCreate, LocationUpdate,
+    Connection, ConnectionCreate,
+    AgentCreate,
+)
 from app.services import adapter
 
 
@@ -73,6 +77,49 @@ async def delete_location(location_id: str):
             detail=f"Location {location_id} not found"
         )
     return None
+
+
+@router.post("/world/scenario/persist")
+@router.post("/api/world/scenario/persist")
+async def persist_scenario(payload: dict):
+    """Persist agents and locations from a scenario response into the world.
+
+    Expected payload shape: {"agents": AgentCreate[], "locations": LocationCreate[]}
+    Beats are ignored here.
+    """
+    try:
+        agents = payload.get("agents") or []
+        locations = payload.get("locations") or []
+
+        created_agents: List[dict] = []
+        created_locations: List[dict] = []
+
+        # Create agents
+        for raw in agents[:20]:
+            try:
+                model = AgentCreate.model_validate(raw)
+                created_agents.append(adapter.create_agent(model.model_dump()))
+            except Exception as e:
+                # Skip invalid entries but continue
+                continue
+
+        # Create locations
+        for raw in locations[:20]:
+            try:
+                model = LocationCreate.model_validate(raw)
+                created_locations.append(adapter.create_location(model.model_dump()))
+            except Exception:
+                continue
+
+        return {
+            "agents": created_agents,
+            "locations": created_locations,
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to persist scenario: {str(e)}"
+        )
 
 
 @router.get("/connections", response_model=List[Connection])

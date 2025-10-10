@@ -99,7 +99,7 @@ function createFacultyStore() {
       await this.updateFaculty(agentId, faculty.id, { activate: !faculty.is_active });
     },
 
-    async updateParameter(agentId: string, facultyId: string, parameterId: string, value: unknown) {
+    async updateParameter(agentId: string, facultyId: string, parameterId: string, value: FacultyParameter['value']) {
       const current = get(faculties);
       const faculty = current.find((item) => item.id === facultyId);
       if (!faculty) {

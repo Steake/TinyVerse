@@ -46,7 +46,36 @@ function createStageStore() {
         agentPositions: Object.fromEntries(
           Object.entries(state.agentPositions).filter(([id]) => id !== agentId)
         )
-      }))
+      })),
+
+    seedScene: (agentIds: string[], positions: Record<string, { x: number; y: number }>) =>
+      update(state => ({
+        ...state,
+        activeAgents: Array.isArray(agentIds) ? agentIds : [],
+        agentPositions: {
+          ...state.agentPositions,
+          ...(positions ?? {})
+        }
+      })),
+    seedFromAgents: (agents: { id: string }[]) =>
+      update(state => {
+        const ids = Array.isArray(agents) ? agents.map(a => a.id) : [];
+        const positions = ids.reduce<Record<string, { x: number; y: number }>>((acc, id) => {
+          acc[id] = {
+            x: 100 + Math.random() * 600,
+            y: 100 + Math.random() * 400
+          };
+          return acc;
+        }, {});
+        return {
+          ...state,
+          activeAgents: ids,
+          agentPositions: {
+            ...state.agentPositions,
+            ...positions
+          }
+        };
+      })
   };
 }
 

@@ -3,11 +3,18 @@ import { api } from '../api';
 import type { Agent, Skill, Routine, Relationship } from './types';
 import { toastStore } from './toast';
 import { loadingStore } from './loading';
+import { ensureUniqueName, buildOccupiedNameSet, canonicalNameKey } from '../utils/naming';
 
 export type { Agent, Skill, Routine, Relationship };
 
 const createAgentStore = () => {
   const { subscribe, set, update } = writable<Agent[]>([]);
+  let snapshot: Agent[] = [];
+  subscribe((value) => {
+    snapshot = value;
+  });
+
+  const getSnapshot = () => snapshot;
 
   return {
     subscribe,
@@ -35,10 +42,16 @@ const createAgentStore = () => {
     addAgent: async (agent: Omit<Agent, 'id' | 'created_at'>) => {
       try {
         loadingStore.start('agents:create');
-        const response = await api.createAgent(agent);
+        const occupied = buildOccupiedNameSet(getSnapshot().map((item) => item.name));
+        const safeName = ensureUniqueName(agent.name ?? '', occupied, { fallback: 'Agent' });
+        const payload = { ...agent, name: safeName };
+
+        const response = await api.createAgent(payload);
         if (response.data) {
+          const canonical = canonicalNameKey(response.data.name);
+          if (canonical) occupied.add(canonical);
           update(agents => [...agents, response.data!]);
-          toastStore.success(`Agent "${agent.name}" created successfully`);
+          toastStore.success(`Agent "${response.data.name}" created successfully`);
           return response.data;
         }
       } catch (error) {
@@ -54,12 +67,17 @@ const createAgentStore = () => {
     updateAgent: async (agent: Agent) => {
       try {
         loadingStore.start(`agents:update:${agent.id}`);
-        const response = await api.updateAgent(agent.id, agent);
+        const others = getSnapshot().filter((entry) => entry.id !== agent.id);
+        const occupied = buildOccupiedNameSet(others.map((item) => item.name));
+        const safeName = ensureUniqueName(agent.name ?? '', occupied, { fallback: 'Agent' });
+        const payload = { ...agent, name: safeName };
+
+        const response = await api.updateAgent(agent.id, payload);
         if (response.data) {
           update(agents => 
             agents.map(a => a.id === agent.id ? response.data! : a)
           );
-          toastStore.success(`Agent "${agent.name}" updated successfully`);
+          toastStore.success(`Agent "${response.data.name}" updated successfully`);
           return response.data;
         }
       } catch (error) {
@@ -206,6 +224,13 @@ const createAgentStore = () => {
       } finally {
         loadingStore.stop('agents:export');
       }
+    },
+
+    seed: (agents: Agent[]) => {
+      set(agents.map(agent => ({
+        ...agent,
+        relationships: agent.relationships || []
+      })));
     }
   };
 };

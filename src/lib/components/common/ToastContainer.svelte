@@ -41,12 +41,15 @@
 <style>
   .toast-container {
     position: fixed;
-    top: var(--space-lg);
-    right: var(--space-lg);
+    bottom: var(--space-lg);
+    left: 50%;
+    transform: translateX(-50%);
     z-index: var(--z-toast);
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-    max-width: 400px;
+    width: calc(100vw - 2 * var(--space-lg));
+    max-width: 640px;
+    padding: 0 var(--space-sm);
   }
 </style>

@@ -271,6 +271,29 @@ class AutofillLocationResponse(BaseModel):
     data: LocationCreate
 
 
+# ------------------------------
+# Scenario autofill
+# ------------------------------
+
+class ScenarioBeat(BaseModel):
+    id: int
+    title: str
+    description: str
+    trigger: str
+    blocks_progress: bool = False
+
+
+class AutofillScenarioRequest(BaseModel):
+    context: Optional[str] = None
+    seed: Optional[Dict[str, Any]] = None
+
+
+class AutofillScenarioResponse(BaseModel):
+    agents: List[AgentCreate] = Field(default_factory=list)
+    locations: List[LocationCreate] = Field(default_factory=list)
+    beats: List[ScenarioBeat] = Field(default_factory=list)
+
+
 class HealthCheck(BaseModel):
     """Health check response."""
     status: str

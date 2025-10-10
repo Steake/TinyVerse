@@ -28,25 +28,9 @@ export const initialStageState: StageState = {
   temperature: 22,
   lighting: 80,
   ambientNoise: 30,
-  activeAgents: mockAgents.slice(0, 3).map(a => a.id),
-  agentPositions: mockAgents.reduce((acc, agent) => ({
-    ...acc,
-    [agent.id]: {
-      x: 100 + Math.random() * 600,
-      y: 100 + Math.random() * 400
-    }
-  }), {}),
-  currentInteractions: [
-    {
-      id: 'int-1',
-      type: 'conversation',
-      participants: [mockAgents[0].id, mockAgents[1].id],
-      content: "Let's review the latest project updates.",
-      startTime: new Date('2024-02-20T09:00:00'),
-      duration: 300000, // 5 minutes
-      mood: 'positive'
-    }
-  ]
+  activeAgents: [],
+  agentPositions: {},
+  currentInteractions: []
 };
 
 export const demoInteractions: Interaction[] = [

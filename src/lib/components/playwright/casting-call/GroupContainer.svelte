@@ -113,7 +113,7 @@
 >
   <GroupHeader {group} />
   
-  <div class="flex flex-wrap gap-[5px] justify-start">
+  <div class="grid gap-2 grid-cols-[repeat(auto-fill,minmax(180px,1fr))] items-start">
     {#each agents as agent, index (agent.id)}
       <div 
         class="agent-card-wrapper"

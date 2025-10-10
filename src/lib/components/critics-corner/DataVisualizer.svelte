@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Chart from 'chart.js/auto';
+  import type { ChartConfiguration, ChartType } from 'chart.js';
   import { simulationStore, type SimulationLog } from '../../stores/simulation';
   import { agentStore } from '../../stores/agents';
 
   let canvas: HTMLCanvasElement;
-  let chart: Chart;
-  let chartType = 'bar';
+  let chart: Chart | null = null;
+  let chartType: ChartType = 'bar';
   let metric = 'actions';
   let timeframe = 'hourly';
 
@@ -43,6 +44,10 @@
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    if (chart) {
+      chart.destroy();
+    }
+
     chart = new Chart(ctx, {
       type: chartType,
       data: {
@@ -67,8 +72,9 @@
     if (!chart) return;
 
     const data = processData();
-    chart.data = data;
-    chart.config.type = chartType;
+    const config = chart.config as ChartConfiguration<ChartType>;
+    config.data = data as ChartConfiguration<ChartType>['data'];
+    config.type = chartType;
     chart.update();
   }
 
@@ -88,7 +94,7 @@
   }
 
   function processActionData(logs: SimulationLog[]) {
-    const actionCounts = logs.reduce((acc, log) => {
+    const actionCounts = logs.reduce<Record<string, number>>((acc, log) => {
       acc[log.action] = (acc[log.action] || 0) + 1;
       return acc;
     }, {});
@@ -108,9 +114,9 @@
   }
 
   function processAgentData(logs: SimulationLog[]) {
-    const agentCounts = logs.reduce((acc, log) => {
+    const agentCounts = logs.reduce<Record<string, number>>((acc, log) => {
       const agent = $agentStore.find(a => a.id === log.agentId);
-      const name = agent ? agent.name : 'Unknown';
+      const name = log.agentName || agent?.name || 'Unknown';
       acc[name] = (acc[name] || 0) + 1;
       return acc;
     }, {});
@@ -126,7 +132,7 @@
   }
 
   function processTimelineData(logs: SimulationLog[]) {
-    const timeGroups = logs.reduce((acc, log) => {
+    const timeGroups = logs.reduce<Record<string, number>>((acc, log) => {
       const date = new Date(log.timestamp);
       let key: string;
 

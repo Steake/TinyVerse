@@ -8,6 +8,9 @@
   import type { Location } from '../../stores/world';
   import type { Agent, Relationship } from '../../stores/agents';
   import { autofill } from '../../actions/autofill';
+  import { autofillStore, runGlobalAutofill, applyFields } from '../../stores/autofill';
+  import { promptStore } from '../../stores/prompts';
+  import { get } from 'svelte/store';
 
   type CallCenterAgentSeed = {
     key: string;
@@ -303,6 +306,7 @@
   let setupStatus: SetupStatus = 'idle';
   let setupMessages: string[] = [];
   let isSettingUpScenario = false;
+
   let clearingWorld = false;
   let isRefreshingState = false;
   let isRunningSteps = false;
@@ -321,6 +325,25 @@
     width: 120,
     height: 120,
   };
+  let locationAutofillPrompt = '';
+  let locationPromptTouched = false;
+
+  const formatLocationPrompt = () => {
+    const name = locationForm.name?.trim();
+    const type = locationForm.type ?? 'room';
+    const description = locationForm.description?.trim();
+    const segments = [
+      name ? `Design a ${type} called "${name}" for the TinyVerse call center.` : 'Call center environment layout.',
+      description ? `Incorporate details like: ${description}.` : undefined,
+      'Return structured coordinates and concise descriptions.'
+    ].filter(Boolean);
+    return segments.join(' ');
+  };
+
+  $: defaultLocationPrompt = formatLocationPrompt();
+  $: if (!locationPromptTouched) {
+    locationAutofillPrompt = defaultLocationPrompt;
+  }
 
   const resetSetupSummary = () => {
     setupSummary = { ...setupSummaryTemplate };
@@ -509,7 +532,6 @@
       toastStore.error('Location name is required');
       return;
     }
-
     creatingLocation = true;
     try {
       const response = await worldStore.addLocation({ ...locationForm });
@@ -524,6 +546,7 @@
           width: 120,
           height: 120,
         };
+        locationPromptTouched = false;
       }
     } catch (error) {
       console.error('Failed to create location', error);
@@ -533,20 +556,28 @@
     }
   }
 
-  import { autofillStore, runGlobalAutofill, applyFields } from '../../stores/autofill';
-  import { get } from 'svelte/store';
+  function handleLocationPromptInput(event: Event) {
+    locationAutofillPrompt = (event.target as HTMLTextAreaElement).value;
+    locationPromptTouched = true;
+  }
+
+  function resetLocationPrompt() {
+    locationPromptTouched = false;
+    locationAutofillPrompt = defaultLocationPrompt;
+  }
 
   async function autofillLocation() {
     if (isAutofillingLocation) return;
     isAutofillingLocation = true;
     try {
-      const seed = { ...locationForm };
-      const hasGlobal = get(autofillStore).globalPrompt.trim().length > 0;
+  const seed = { ...locationForm };
+  const hasGlobal = get(promptStore).master.prompt.trim().length > 0;
       let payload: any;
       if (hasGlobal) {
         payload = await runGlobalAutofill('location', seed);
       } else {
-        const response = await api.autofill({ form: 'location', context: 'Call center environment layout', seed });
+        const context = locationAutofillPrompt.trim() || defaultLocationPrompt;
+        const response = await api.autofill({ form: 'location', context, seed });
         payload = response.data;
       }
 
@@ -859,6 +890,24 @@
         </button>
       </div>
       <div class="card-body">
+        <div class="form-control">
+          <label class="label" for="location-autofill-prompt">
+            <span class="label-text">Autofill prompt</span>
+            <span class="label-text-alt">Used when no global prompt is set</span>
+          </label>
+          <textarea
+            id="location-autofill-prompt"
+            class="textarea textarea-bordered"
+            rows="3"
+            bind:value={locationAutofillPrompt}
+            on:input={handleLocationPromptInput}
+            placeholder="Summarize the kind of location you want the LLM to design"
+          />
+          <div class="label" role="note">
+            <span class="label-text-alt">Defaults adapt based on the current form values.</span>
+            <button type="button" class="btn btn-ghost btn-xs" on:click={resetLocationPrompt}>Reset</button>
+          </div>
+        </div>
         <form on:submit|preventDefault={handleCreateLocation} data-testid="location-form">
           <ul data-layout="grid">
             <li class="field">

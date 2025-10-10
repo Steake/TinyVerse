@@ -1,0 +1,75 @@
+.autofill-panel {
+  margin-top: var(--space-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.autofill-panel:first-child {
+  margin-top: var(--space-xs);
+}
+
+.autofill-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.autofill-controls .autofill-prompt {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.autofill-controls .autofill-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.autofill-panel .autofill-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+}
+
+.autofill-panel[data-loading="true"] .autofill-trigger {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.autofill-panel[data-loading="true"] .autofill-status {
+  display: inline;
+}
+
+.autofill-status {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  display: none;
+}
+
+.autofill-status[data-visible="true"] {
+  display: inline;
+}
+
+.autofill-target[data-autofill-loading="true"] {
+  position: relative;
+}
+
+.autofill-target[data-autofill-loading="true"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid var(--color-border-accent);
+  border-radius: inherit;
+  animation: autofill-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes autofill-pulse {
+  from {
+    opacity: 0.15;
+  }
+  to {
+    opacity: 0.45;
+  }
+}

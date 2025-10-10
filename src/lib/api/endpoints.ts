@@ -28,10 +28,13 @@ export const API_ENDPOINTS = {
   CLEAR_STORAGE: '/api/clear',
   AGENT_LOCATIONS: (agentId: string) => `/api/agents/${agentId}/locations`,
   AGENT_LOCATION: (agentId: string, locationId: string) => `/api/agents/${agentId}/locations/${locationId}`,
-  SIMULATION_STATE: '/api/simulation/state',
-  SIMULATION_CONTROL: '/api/simulation/control',
-  SIMULATION_LOGS: '/api/simulation/logs',
-  SIMULATION_ACTION: '/api/simulation/action',
+  SIMULATION_STATE: '/simulation/state',
+  SIMULATION_CONTROL: '/simulation/control',
+  SIMULATION_LOGS: '/simulation/logs',
+  SIMULATION_ACTION: '/simulation/action',
+
+  // Admin endpoints
+  ADMIN_RESET: '/api/admin/reset',
 
   // World endpoints
   LOCATIONS: '/api/locations',

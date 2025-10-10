@@ -1,18 +1,22 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { agentStore, type Agent } from '../../stores/agents';
-  import AgentForm from './AgentForm.svelte';
-  import AgentList from './AgentList.svelte';
+  import AgentForm from '../playwright/casting-call/AgentForm.svelte';
+  import AgentList from '../playwright/casting-call/AgentList.svelte';
   import { createNewAgent } from '../../utils/agent';
+  import { mockAgents } from '../../utils/mock-data/agents';
 
   let showForm = false;
-  let editingAgent: Partial<Agent> | null = null;
+  let editingAgent: Partial<Agent> | undefined = undefined;
   let isEditing = false;
 
   onMount(() => {
     if ($agentStore.length === 0) {
-      const { mockAgents } = require('../../utils/mock-data/agents');
-      mockAgents.forEach(agent => agentStore.addAgent(agent));
+      mockAgents.forEach(agent => {
+        if (!agentStore.getAgent(agent.id)) {
+          agentStore.addAgent(agent);
+        }
+      });
     }
   });
 
@@ -30,12 +34,12 @@
       agentStore.addAgent(agent);
     }
     showForm = false;
-    editingAgent = null;
+    editingAgent = undefined;
   }
 
   function handleCancel() {
     showForm = false;
-    editingAgent = null;
+    editingAgent = undefined;
     isEditing = false;
   }
 </script>
@@ -71,7 +75,7 @@
           </button>
         </div>
         <AgentForm 
-          agent={editingAgent} 
+          agent={editingAgent ?? createNewAgent()} 
           on:save={handleSave}
           on:cancel={handleCancel}
         />

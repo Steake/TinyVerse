@@ -12,7 +12,7 @@
 
   async function updateParameter(parameter: FacultyParameter, event: Event) {
     const target = event.target as HTMLInputElement | HTMLSelectElement;
-    let value: unknown = parameter.value;
+  let value: FacultyParameter['value'] = parameter.value;
 
     switch (parameter.type) {
       case 'boolean':

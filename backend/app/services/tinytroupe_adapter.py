@@ -8,12 +8,18 @@ import copy
 import json
 import logging
 import sys
+import textwrap
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.schemas import AgentCreate, LocationCreate
+from app.schemas import (
+    AgentCreate,
+    LocationCreate,
+    AutofillScenarioResponse,
+    ScenarioBeat,
+)
 
 TINYTROUPE_LOCAL_PATH = Path(__file__).resolve().parent.parent / "tinytroupe-local"
 
@@ -33,13 +39,15 @@ try:
     from tinytroupe.environment import TinyWorld
     from tinytroupe.tools.tiny_calendar import TinyCalendar
     from tinytroupe.tools.tiny_word_processor import TinyWordProcessor
-    from tinytroupe.utils.llm import LLMChat, extract_json
+    from tinytroupe.utils.llm import LLMChat
 except ModuleNotFoundError as exc:
     missing_module = exc.name if hasattr(exc, "name") else "tinytroupe"
     raise ModuleNotFoundError(
         f"TinyTroupe dependency '{missing_module}' is missing. "
         "Run backend/setup.sh to install the vendored TinyTroupe package."
     ) from exc
+
+from app.utils.json_tools import coerce_json_object
 
 logger = logging.getLogger(__name__)
 
@@ -300,6 +308,42 @@ class TinyTroupeAdapter:
             self.tools_registry.pop(tool_id, None)
 
         return True
+
+    # ---------------------------------------------------------------------
+    # Admin utilities
+    # ---------------------------------------------------------------------
+    def reset_all(self):
+        """Hard reset all in-memory state (agents, locations, connections, tools, faculties, logs).
+
+        Reinitializes TinyWorld and clears registries. Intended for admin reset endpoint.
+        """
+        try:
+            # Detach faculties from persons to avoid dangling references
+            for agent_id, person in list(self.agents.items()):
+                # best-effort detach; faculties are cleaned when deleting agents normally
+                pass
+        except Exception:
+            pass
+
+        self.agents.clear()
+        self.agent_metadata.clear()
+        self.locations.clear()
+        self.connections.clear()
+        self.faculties.clear()
+        self.agent_faculty_index.clear()
+        self.tools_registry.clear()
+        self.agent_tool_index.clear()
+        self._agent_name_to_id.clear()
+        self._log_history.clear()
+        self._last_log_index = 0
+        self.simulation_running = False
+        self.current_step = 0
+        # Recreate world
+        try:
+            self.world = TinyWorld("TinyVerse Simulation")
+        except Exception:
+            # As a fallback, leave world as-is if TinyWorld ctor fails
+            pass
 
     def _get_person(self, agent_id: str) -> TinyPerson:
         """Return the TinyPerson instance for an agent id or raise."""
@@ -798,8 +842,10 @@ class TinyTroupeAdapter:
             chat = LLMChat(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                output_type=dict,
-                enable_json_output_format=True,
+                # Let TinyTroupe return raw text and avoid its internal JSON extractor
+                # which logs noisy errors when models return bundled payloads.
+                output_type=str,
+                enable_json_output_format=False,
                 enable_justification_step=False,
             )
             response = chat.call()
@@ -807,13 +853,169 @@ class TinyTroupeAdapter:
             logger.exception("Autofill LLM call failed: %s", exc)
             raise RuntimeError(f"LLM call failed: {exc}") from exc
 
-        if isinstance(response, dict):
-            return response
+        try:
+            payload = coerce_json_object(response)
+            return self._sanitize_generated_payload(payload)
+        except ValueError:
+            # As a last resort, try to salvage a single agent/location object from a bundled scenario blob.
+            logger.warning("Primary JSON parse failed; attempting targeted extraction from raw text")
+            text = str(response)
+            salvage = self._salvage_first_object_from_text(text)
+            if salvage is None:
+                logger.error("Failed to parse LLM JSON payload", exc_info=True)
+                raise RuntimeError("LLM returned unparsable JSON content")
+            return self._sanitize_generated_payload(salvage)
 
-        if isinstance(response, str):
-            return extract_json(response)
+    @staticmethod
+    def _strip_wrapping_quotes(text: str) -> str:
+        if isinstance(text, str) and len(text) >= 2 and text[0] == text[-1] == '"':
+            return text[1:-1]
+        return text
 
-        return extract_json(str(response))
+    def _sanitize_generated_payload(self, data: Any) -> Any:
+        if isinstance(data, dict):
+            sanitized: Dict[str, Any] = {}
+            for key, value in data.items():
+                new_key = self._strip_wrapping_quotes(key) if isinstance(key, str) else key
+                sanitized[new_key] = self._sanitize_generated_payload(value)
+            return sanitized
+        if isinstance(data, list):
+            return [self._sanitize_generated_payload(item) for item in data]
+        if isinstance(data, str):
+            return self._strip_wrapping_quotes(data.strip())
+        return data
+
+    def _salvage_first_object_from_text(self, text: str) -> Optional[Dict[str, Any]]:
+        """Try to recover a single object (first agent or first location) from a bundled JSON-ish text.
+
+        Strategy:
+        - Find top-level keys agents or locations
+        - Extract the first {...} object inside the corresponding array using a simple brace counter
+        - Parse that object with json-repair
+        Returns None if nothing plausible found.
+        """
+        import re
+        from json_repair import repair_json
+
+        def _extract_first_object_after(key: str) -> Optional[str]:
+            m = re.search(rf'"{key}"\s*:\s*\[', text)
+            if not m:
+                return None
+            i = m.end()
+            # Skip whitespace
+            n = len(text)
+            while i < n and text[i].isspace():
+                i += 1
+            # Expect an opening brace
+            while i < n and text[i] != '{':
+                i += 1
+            if i >= n:
+                return None
+            # Brace matching to capture the first object
+            start = i
+            depth = 0
+            while i < n:
+                ch = text[i]
+                if ch == '{':
+                    depth += 1
+                elif ch == '}':
+                    depth -= 1
+                    if depth == 0:
+                        return text[start:i+1]
+                i += 1
+            return None
+
+        for key in ("agent", "agents", "location", "locations"):
+            frag = _extract_first_object_after(key)
+            if not frag:
+                continue
+            try:
+                repaired = repair_json(frag)
+                obj = json.loads(repaired)
+                if isinstance(obj, dict):
+                    # If we found from agents/locations, wrap to match call sites
+                    if key.startswith('agent'):
+                        return {"agent": obj}
+                    if key.startswith('location'):
+                        return {"location": obj}
+                    return obj
+            except Exception:
+                continue
+        return None
+
+    def _extract_agent_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = dict(payload or {})
+
+        if "data" in data and isinstance(data["data"], dict):
+            data = dict(data["data"])
+
+        if "agent" in data and isinstance(data["agent"], dict):
+            data = dict(data["agent"])
+
+        if "agents" in data and isinstance(data["agents"], list) and data["agents"]:
+            first_agent = data["agents"][0]
+            if isinstance(first_agent, dict):
+                logger.warning("LLM returned agent bundle; selecting first entry from 'agents' list")
+                data = dict(first_agent)
+
+        allowed_keys = {
+            "name",
+            "age",
+            "occupation",
+            "occupation_description",
+            "nationality",
+            "country_of_residence",
+            "personality_traits",
+            "professional_interests",
+            "personal_interests",
+            "skills",
+            "backstory",
+            "emoji",
+        }
+
+        filtered = {key: value for key, value in data.items() if key in allowed_keys}
+        if filtered != data:
+            logger.info("Filtered extraneous agent fields from LLM payload: %s", sorted(set(data) - allowed_keys))
+        return filtered or data
+
+    def _extract_location_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = dict(payload or {})
+
+        if "data" in data and isinstance(data["data"], dict):
+            data = dict(data["data"])
+
+        if "location" in data and isinstance(data["location"], dict):
+            data = dict(data["location"])
+
+        if "locations" in data and isinstance(data["locations"], list) and data["locations"]:
+            first_location = data["locations"][0]
+            if isinstance(first_location, dict):
+                logger.warning("LLM returned location bundle; selecting first entry from 'locations' list")
+                data = dict(first_location)
+
+        allowed_keys = {"name", "type", "description", "x", "y", "width", "height", "image"}
+        filtered = {key: value for key, value in data.items() if key in allowed_keys}
+        if filtered != data:
+            logger.info("Filtered extraneous location fields from LLM payload: %s", sorted(set(data) - allowed_keys))
+        return filtered or data
+
+    def _extract_scenario_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        data = dict(payload or {})
+        if "data" in data and isinstance(data["data"], dict):
+            data = dict(data["data"])
+        agents = []
+        if isinstance(data.get("agents"), list):
+            agents = [x for x in data["agents"] if isinstance(x, dict)]
+        locations = []
+        if isinstance(data.get("locations"), list):
+            locations = [x for x in data["locations"] if isinstance(x, dict)]
+        beats = []
+        if isinstance(data.get("narrative"), list):
+            beats = [x for x in data["narrative"] if isinstance(x, dict)]
+        # Some models might return "beats"
+        if not beats and isinstance(data.get("beats"), list):
+            beats = [x for x in data["beats"] if isinstance(x, dict)]
+        return {"agents": agents, "locations": locations, "beats": beats}
 
     def _normalize_agent_autofill(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         payload = dict(payload or {})
@@ -863,27 +1065,56 @@ class TinyTroupeAdapter:
     def _autofill_agent(self, context: Optional[str], seed: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         seed_json = json.dumps(seed or {}, indent=2)
         system_prompt = (
-            "You are a simulation designer creating richly detailed personas for a high-fidelity multi-agent world. "
-            "Produce JSON that matches the TinyVerse Agent schema exactly."
+            "You are responsible for authoring TinyVerse simulation data. "
+            "Always answer with strict JSON that can be parsed by json.loads without repair."
         )
-        user_prompt = f"""
-Design a believable agent persona for the TinyVerse simulation.
+        user_prompt = textwrap.dedent(
+            f"""
+            Design a believable agent persona for the TinyVerse simulation.
 
-Context (optional): {context or "None provided"}
+            Context (optional): {context or "None provided"}
 
-Existing seed data (JSON): {seed_json}
+            Existing seed data (JSON): {seed_json}
 
-Output Requirements:
-- Return a single JSON object with the following keys: name, age, occupation, occupation_description,
-  nationality, country_of_residence, personality_traits, professional_interests, personal_interests,
-  skills, backstory.
-- personality_traits, professional_interests, personal_interests must be non-empty arrays of short descriptive strings.
-- skills must be an array of objects with `name` (snake_case identifier) and `level` (integer 0-10).
-- Keep responses grounded in the context. Avoid placeholders or template filler.
-- Do not include commentary or markdown, only the JSON object.
-        """
+            Output contract (follow every rule exactly):
+            1. Reply with a single JSON object—no arrays, extra keys, or surrounding text/markdown.
+            2. The object must contain exactly these keys:
+               name, age, occupation, occupation_description, nationality, country_of_residence,
+               personality_traits, professional_interests, personal_interests, skills, backstory, emoji.
+            3. Every key and string value must use double quotes. Do not include single quotes or smart quotes.
+            4. age: integer between 18 and 80 inclusive.
+            5. personality_traits, professional_interests, personal_interests: JSON arrays with at least two descriptive strings each.
+            6. skills: JSON array with >=3 objects shaped as {{"name": "snake_case", "level": integer 0-10}}.
+            7. backstory: coherent HTML paragraph string wrapped in <p>...</p> with internal double quotes escaped (\").
+            8. emoji: single Unicode emoji character.
+            9. If a seed value is provided, reuse or extend it without removing required keys.
+
+            Valid format example (values are illustrative only):
+            {{
+              "name": "Ariadne Costa",
+              "age": 32,
+              "occupation": "Urban Resilience Strategist",
+              "occupation_description": "Designs contingency playbooks for city-scale crises",
+              "nationality": "Brazilian",
+              "country_of_residence": "Portugal",
+              "personality_traits": ["Analytical", "Calm", "Tenacious"],
+              "professional_interests": ["Systems thinking", "Disaster mitigation"],
+              "personal_interests": ["Trail running", "Independent cinema"],
+              "skills": [
+                {{"name": "scenario_modeling", "level": 8}},
+                {{"name": "stakeholder_alignment", "level": 7}},
+                {{"name": "resource_triage", "level": 6}}
+              ],
+              "backstory": "<p>Ariadne...</p>",
+              "emoji": "🧭"
+            }}
+
+            Return only the populated JSON object.
+            """
+        )
         llm_payload = self._call_llm_json(system_prompt, user_prompt)
-        normalized = self._normalize_agent_autofill(llm_payload)
+        agent_payload = self._extract_agent_payload(llm_payload)
+        normalized = self._normalize_agent_autofill(agent_payload)
         agent_model = AgentCreate.model_validate(normalized)
         return agent_model.model_dump()
 
@@ -912,27 +1143,130 @@ Output Requirements:
     def _autofill_location(self, context: Optional[str], seed: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         seed_json = json.dumps(seed or {}, indent=2)
         system_prompt = (
-            "You are mapping spaces inside a synthetic world simulation. "
-            "Produce JSON matching the TinyVerse Location schema."
+            "You map TinyVerse locations. Output must be strict JSON parsable by json.loads with no fixes."
         )
-        user_prompt = f"""
-Design a location for the TinyVerse simulation world.
+        user_prompt = textwrap.dedent(
+            f"""
+            Design a location for the TinyVerse simulation world.
 
-Context (optional): {context or "None provided"}
+            Context (optional): {context or "None provided"}
 
-Existing seed data (JSON): {seed_json}
+            Existing seed data (JSON): {seed_json}
 
-Output Requirements:
-- Return a single JSON object with keys: name, type, description, x, y, width, height, image.
-- type must be one of: room, outdoor, special.
-- x, y, width, height should be floating point numbers representing coordinates on a 2D canvas.
-- Keep the description grounded and actionable. Avoid generic filler.
-- Do not include commentary or markdown.
-        """
+            Output contract (follow every rule exactly):
+            1. Reply with a single JSON object—no surrounding text, code fences, or additional keys.
+            2. The object must contain exactly these keys: name, type, description, x, y, width, height, image.
+            3. All keys and string values must use double quotes. Numbers must be plain JSON numbers.
+            4. type must be one of: "room", "outdoor", "special".
+            5. x, y, width, height must be floating point numbers representing coordinates/sizes on a 2D canvas.
+            6. description should be specific, sensory, and grounded; avoid filler adjectives.
+            7. image can be null or a descriptive string URL/path.
+            8. Preserve any provided seed values unless they violate these rules.
+
+            Valid format example (values illustrative):
+            {{
+              "name": "Atrium Nexus",
+              "type": "room",
+              "description": "A sunlit atrium with suspended walkways and hydroponic planters",
+              "x": 24.0,
+              "y": 12.5,
+              "width": 18.0,
+              "height": 9.5,
+              "image": null
+            }}
+
+            Return only the populated JSON object.
+            """
+        )
         llm_payload = self._call_llm_json(system_prompt, user_prompt)
-        normalized = self._normalize_location_autofill(llm_payload)
+        location_payload = self._extract_location_payload(llm_payload)
+        normalized = self._normalize_location_autofill(location_payload)
         location_model = LocationCreate.model_validate(normalized)
         return location_model.model_dump()
+
+    def _normalize_beat(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        d = dict(raw or {})
+        # Fix over-quoted keys
+        def uq(k: str) -> str:
+            if isinstance(k, str) and len(k) >= 2 and k[0] == k[-1] == '"':
+                return k[1:-1]
+            return k
+        d = {uq(k): v for k, v in d.items()}
+        # Coerce types
+        try:
+            d["id"] = int(d.get("id", 1))
+        except Exception:
+            d["id"] = 1
+        d["title"] = str(d.get("title", "Untitled")).strip()
+        d["description"] = str(d.get("description", d.get('"description"', ""))).strip()
+        d["trigger"] = str(d.get("trigger", d.get('"trigger"', ""))).strip()
+        bp = d.get("blocks_progress", d.get('"blocks_progress"', False))
+        d["blocks_progress"] = bool(bp in (True, "true", 1, "1"))
+        # Drop weird quoted-key duplicates
+        for k in ["\"description\"", "\"trigger\"", "\"blocks_progress\""]:
+            d.pop(k, None)
+        return d
+
+    def _autofill_scenario(self, context: Optional[str], seed: Optional[Dict[str, Any]]) -> AutofillScenarioResponse:
+        seed_json = json.dumps(seed or {}, indent=2)
+        system_prompt = (
+            "You author complete TinyVerse scenarios. Output must be strict JSON parsable by json.loads with no fixes."
+        )
+        user_prompt = textwrap.dedent(
+            f"""
+            Create a complete scenario with agents, locations, and beats.
+
+            Context (optional): {context or "None provided"}
+
+            Existing seed data (JSON): {seed_json}
+
+            Output contract (follow every rule exactly):
+            1. Reply with ONE JSON object only, no markdown and no prose.
+            2. The object must have exactly these top-level keys: agents, locations, beats.
+            3. agents: array of agent objects with the same schema as AgentCreate (no extra keys).
+            4. locations: array of location objects with the same schema as LocationCreate (no extra keys).
+            5. beats: array of objects with keys: id (int), title (string), description (string), trigger (string), blocks_progress (boolean).
+            6. All keys must be in double quotes with no embedded or duplicated quotes.
+            7. Do not include any other top-level keys.
+
+            Example shape (values illustrative):
+            {{
+              "agents": [{{"name": "A", "age": 30, "occupation": "X", "personality_traits": [], "professional_interests": [], "personal_interests": [], "skills": [], "backstory": ""}}],
+              "locations": [{{"name": "L", "type": "room", "description": "", "x": 0, "y": 0, "width": 100, "height": 100, "image": null}}],
+              "beats": [{{"id": 1, "title": "Intro", "description": "...", "trigger": "...", "blocks_progress": false}}]
+            }}
+
+            Return only the JSON object.
+            """
+        )
+
+        # Call and sanitize
+        raw = self._call_llm_json(system_prompt, user_prompt)
+        scenario = self._extract_scenario_payload(raw)
+
+        # Validate/normalize agents
+        agents: List[AgentCreate] = []
+        for a in scenario.get("agents", [])[:6]:
+            normalized = self._normalize_agent_autofill(a)
+            agents.append(AgentCreate.model_validate(normalized))
+
+        # Validate/normalize locations
+        locations: List[LocationCreate] = []
+        for l in scenario.get("locations", [])[:8]:
+            normalized = self._normalize_location_autofill(l)
+            locations.append(LocationCreate.model_validate(normalized))
+
+        # Normalize beats
+        beats: List[ScenarioBeat] = []
+        for b in scenario.get("beats", scenario.get("narrative", []))[:12]:
+            nb = self._normalize_beat(b)
+            beats.append(ScenarioBeat.model_validate(nb))
+
+        return AutofillScenarioResponse(
+            agents=agents,
+            locations=locations,
+            beats=beats,
+        )
 
     def autofill_form(
         self,

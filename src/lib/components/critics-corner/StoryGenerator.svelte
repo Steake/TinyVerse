@@ -29,7 +29,7 @@
 
   function filterLogs(logs: SimulationLog[]): SimulationLog[] {
     return logs.filter(log => {
-      if (selectedAgents.length && !selectedAgents.includes(log.agentId)) return false;
+      if (selectedAgents.length && (!log.agentId || !selectedAgents.includes(log.agentId))) return false;
       if (selectedEventTypes.length && !selectedEventTypes.includes(log.action)) return false;
       return true;
     });
@@ -37,17 +37,38 @@
 
   function formatLogForStory(log: SimulationLog): string {
     const agent = $agentStore.find(a => a.id === log.agentId);
-    const agentName = agent?.name || 'Unknown Agent';
+    const agentName = log.agentName || agent?.name || 'Unknown Agent';
+    const metadata = log.metadata ?? {};
+    const rawContent = (metadata.rawContent ?? {}) as Record<string, unknown>;
+
+    const getString = (value: unknown): string | null => {
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value;
+      }
+      return null;
+    };
+
+    const location = getString(metadata.location) ?? getString(rawContent.location);
+    const message = getString(log.content) ?? getString(rawContent.message);
+    const title = getString(rawContent.title) ?? getString(metadata.title);
 
     switch (log.action) {
       case 'MOVE':
-        return `${agentName} moved to ${log.data.location}`;
+        return location
+          ? `${agentName} moved to ${location}`
+          : `${agentName} moved`;
       case 'TALK':
-        return `${agentName} said "${log.data.message}"`;
+        return message
+          ? `${agentName} said "${message}"`
+          : `${agentName} spoke.`;
       case 'WRITE_DOCUMENT':
-        return `${agentName} wrote a document titled "${log.data.title}"`;
+        return title
+          ? `${agentName} wrote a document titled "${title}"`
+          : `${agentName} wrote a document.`;
       case 'CREATE_EVENT':
-        return `${agentName} scheduled an event: ${log.data.title}`;
+        return title
+          ? `${agentName} scheduled an event: ${title}`
+          : `${agentName} scheduled an event.`;
       default:
         return `${agentName} performed an action: ${log.action}`;
     }
@@ -73,7 +94,11 @@
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (e) {
-      error = e.message;
+      if (e instanceof Error) {
+        error = e.message;
+      } else {
+        error = 'Failed to generate story';
+      }
       generatedStory = '';
     } finally {
       loading = false;
@@ -106,23 +131,25 @@
     switch (style) {
       case 'dramatic':
         return event.replace(/moved to|said|wrote|scheduled/g, match => {
-          const dramatic = {
+          const dramatic: Record<'moved to' | 'said' | 'wrote' | 'scheduled', string> = {
             'moved to': 'ventured forth to',
-            'said': 'proclaimed',
-            'wrote': 'penned with great purpose',
-            'scheduled': 'decreed'
+            said: 'proclaimed',
+            wrote: 'penned with great purpose',
+            scheduled: 'decreed'
           };
-          return dramatic[match] || match;
+          const key = match as keyof typeof dramatic;
+          return dramatic[key] ?? match;
         });
       case 'humorous':
         return event.replace(/moved to|said|wrote|scheduled/g, match => {
-          const humorous = {
+          const humorous: Record<'moved to' | 'said' | 'wrote' | 'scheduled', string> = {
             'moved to': 'skipped merrily to',
-            'said': 'blurted out',
-            'wrote': 'scribbled',
-            'scheduled': 'penciled in'
+            said: 'blurted out',
+            wrote: 'scribbled',
+            scheduled: 'penciled in'
           };
-          return humorous[match] || match;
+          const key = match as keyof typeof humorous;
+          return humorous[key] ?? match;
         });
       default:
         return event;
@@ -145,8 +172,8 @@
 <div class="space-y-6">
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <!-- Agent Selection -->
-    <div class="form-control">
-      <label class="label">Featured Agents</label>
+    <fieldset class="form-control">
+      <legend class="label-text font-semibold">Featured Agents</legend>
       <div class="flex flex-wrap gap-2">
         {#each $agentStore as agent}
           <label class="label cursor-pointer gap-2">
@@ -160,11 +187,11 @@
           </label>
         {/each}
       </div>
-    </div>
+    </fieldset>
 
     <!-- Event Type Selection -->
-    <div class="form-control">
-      <label class="label">Event Types</label>
+    <fieldset class="form-control">
+      <legend class="label-text font-semibold">Event Types</legend>
       <div class="flex flex-wrap gap-2">
         {#each eventTypes as eventType}
           <label class="label cursor-pointer gap-2">
@@ -178,12 +205,12 @@
           </label>
         {/each}
       </div>
-    </div>
+    </fieldset>
   </div>
 
   <!-- Narrative Style -->
-  <div class="form-control">
-    <label class="label">Narrative Style</label>
+  <fieldset class="form-control">
+    <legend class="label-text font-semibold">Narrative Style</legend>
     <div class="flex gap-4">
       {#each styles as style}
         <label class="label cursor-pointer gap-2">
@@ -200,7 +227,7 @@
         </label>
       {/each}
     </div>
-  </div>
+  </fieldset>
 
   <!-- Custom Prompt -->
   <div class="form-control">

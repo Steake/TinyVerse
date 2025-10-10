@@ -1,0 +1,418 @@
+/* ============================================
+   TinyVerse Universal Layout System
+   Automatic constraints via flexbox inheritance
+   ============================================ */
+
+/* ============================================
+   ROOT LAYOUT CONSTRAINTS
+   ============================================ */
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* App root container - constrains everything */
+#app {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* ============================================
+   AUTOMATIC LAYOUT HIERARCHY
+   ============================================ */
+
+/* Level 1: Main navigation/header */
+header,
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Level 2: Main content area */
+main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 2rem;
+  gap: 2rem;
+  box-sizing: border-box;
+}
+
+/* Level 3: Sections within main */
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Level 4: Articles (content blocks) */
+article {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Level 5: Generic containers */
+div {
+  box-sizing: border-box;
+}
+
+/* ============================================
+   AUTOMATIC FLEX PATTERNS
+   ============================================ */
+
+/* Horizontal layouts (default for inline elements) */
+header > *,
+nav > *,
+footer > * {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Form layouts - automatic vertical stacking */
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 600px;
+}
+
+form > div,
+form > fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* List layouts - automatic vertical stacking with gaps */
+ul, ol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+}
+
+ul li, ol li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Grid-like lists (e.g., agent cards, location cards) */
+ul[data-layout="grid"],
+div[data-layout="grid"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+/* ============================================
+   RESPONSIVE CONSTRAINTS
+   ============================================ */
+
+/* Tablet breakpoint */
+@media (max-width: 1024px) {
+  main {
+    padding: 1.5rem;
+    gap: 1.5rem;
+  }
+  
+  ul[data-layout="grid"],
+  div[data-layout="grid"] {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+}
+
+/* Mobile breakpoint */
+@media (max-width: 768px) {
+  main {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  header,
+  nav {
+    padding: 1rem;
+  }
+  
+  ul[data-layout="grid"],
+  div[data-layout="grid"] {
+    grid-template-columns: 1fr;
+  }
+  
+  article {
+    padding: 1rem;
+  }
+}
+
+/* ============================================
+   AUTOMATIC CONTENT FLOW
+   ============================================ */
+
+/* Headings automatically create visual hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+/* Paragraphs and text blocks */
+p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  max-width: 65ch; /* Optimal reading width */
+}
+
+/* Images and media - responsive by default */
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Tables - responsive wrapper */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow-x: auto;
+  display: block;
+}
+
+/* ============================================
+   AUTOMATIC SPACING RHYTHM
+   ============================================ */
+
+/* All direct children of main/section get consistent spacing */
+main > *:not(:last-child),
+section > *:not(:last-child) {
+  margin-bottom: 2rem;
+}
+
+/* Nested elements get smaller gaps */
+article > *:not(:last-child) {
+  margin-bottom: 1rem;
+}
+
+/* Remove bottom margin from last children */
+*:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================
+   UTILITY LAYOUT CLASSES
+   ============================================ */
+
+/* Flex direction overrides */
+.flex {
+  display: flex;
+}
+
+.flex-row {
+  flex-direction: row;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+/* Flex wrapping */
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.flex-nowrap {
+  flex-wrap: nowrap;
+}
+
+/* Alignment */
+.items-start { align-items: flex-start; }
+.items-center { align-items: center; }
+.items-end { align-items: flex-end; }
+.items-stretch { align-items: stretch; }
+
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+
+.self-start { align-self: flex-start; }
+.self-center { align-self: center; }
+.self-end { align-self: flex-end; }
+.self-stretch { align-self: stretch; }
+
+/* Gaps */
+.gap-xs { gap: 0.25rem; }
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }
+.gap-lg { gap: 1.5rem; }
+.gap-xl { gap: 2rem; }
+
+/* Flex grow/shrink */
+.flex-1 { flex: 1; }
+.flex-auto { flex: 1 1 auto; }
+.flex-none { flex: none; }
+
+/* Width constraints */
+.w-full { width: 100%; }
+.w-auto { width: auto; }
+.w-fit { width: fit-content; }
+
+.max-w-xs { max-width: 20rem; }
+.max-w-sm { max-width: 24rem; }
+.max-w-md { max-width: 28rem; }
+.max-w-lg { max-width: 32rem; }
+.max-w-xl { max-width: 36rem; }
+.max-w-2xl { max-width: 42rem; }
+.max-w-full { max-width: 100%; }
+
+/* Height constraints */
+.h-full { height: 100%; }
+.h-screen { height: 100vh; }
+.min-h-screen { min-height: 100vh; }
+
+/* Spacing utilities */
+.p-xs { padding: 0.25rem; }
+.p-sm { padding: 0.5rem; }
+.p-md { padding: 1rem; }
+.p-lg { padding: 1.5rem; }
+.p-xl { padding: 2rem; }
+
+.m-xs { margin: 0.25rem; }
+.m-sm { margin: 0.5rem; }
+.m-md { margin: 1rem; }
+.m-lg { margin: 1.5rem; }
+.m-xl { margin: 2rem; }
+
+.mt-xs { margin-top: 0.25rem; }
+.mt-sm { margin-top: 0.5rem; }
+.mt-md { margin-top: 1rem; }
+.mt-lg { margin-top: 1.5rem; }
+.mt-xl { margin-top: 2rem; }
+
+.mb-xs { margin-bottom: 0.25rem; }
+.mb-sm { margin-bottom: 0.5rem; }
+.mb-md { margin-bottom: 1rem; }
+.mb-lg { margin-bottom: 1.5rem; }
+.mb-xl { margin-bottom: 2rem; }
+
+.ml-xs { margin-left: 0.25rem; }
+.ml-sm { margin-left: 0.5rem; }
+.ml-md { margin-left: 1rem; }
+.ml-lg { margin-left: 1.5rem; }
+.ml-xl { margin-left: 2rem; }
+
+.mr-xs { margin-right: 0.25rem; }
+.mr-sm { margin-right: 0.5rem; }
+.mr-md { margin-right: 1rem; }
+.mr-lg { margin-right: 1.5rem; }
+.mr-xl { margin-right: 2rem; }
+
+/* ============================================
+   SPECIAL LAYOUT PATTERNS
+   ============================================ */
+
+/* Sidebar layout (automatic) */
+.layout-sidebar {
+  display: flex;
+  gap: 2rem;
+}
+
+.layout-sidebar > aside {
+  flex: 0 0 280px;
+  position: sticky;
+  top: 2rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+.layout-sidebar > main {
+  flex: 1;
+  min-width: 0; /* Prevent flex overflow */
+}
+
+@media (max-width: 1024px) {
+  .layout-sidebar {
+    flex-direction: column;
+  }
+  
+  .layout-sidebar > aside {
+    flex: none;
+    position: relative;
+    max-height: none;
+  }
+}
+
+/* Split view (50/50) */
+.layout-split {
+  display: flex;
+  gap: 2rem;
+}
+
+.layout-split > * {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .layout-split {
+    flex-direction: column;
+  }
+}
+
+/* Dashboard grid */
+.layout-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Centered content (forms, cards) */
+.layout-centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100%;
+  padding: 2rem;
+}
+
+.layout-centered > * {
+  width: 100%;
+  max-width: 600px;
+}
+
+/* Full bleed sections */
+.layout-full-bleed {
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
+  padding-left: calc(50vw - 50%);
+  padding-right: calc(50vw - 50%);
+}

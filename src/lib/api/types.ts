@@ -24,6 +24,9 @@ export interface ApiConfig {
   timeout: number;
   retryAttempts: number;
   retryDelay: number;
+  wsUrl?: string;
+  headers?: Record<string, string>;
+  autofillTimeoutMs?: number;
 }
 
 export interface QueryParams {
@@ -130,3 +133,22 @@ export interface AutofillRequestPayload {
 export type AutofillResponsePayload =
   | { form: 'agent'; data: Agent }
   | { form: 'location'; data: Location };
+
+export interface ScenarioAutofillRequestPayload {
+  context?: string;
+  seed?: Record<string, unknown>;
+}
+
+export interface ScenarioBeatDTO {
+  id: number;
+  title: string;
+  description: string;
+  trigger: string;
+  blocks_progress: boolean;
+}
+
+export interface ScenarioAutofillResponsePayload {
+  agents: Agent[];
+  locations: Location[];
+  beats: ScenarioBeatDTO[];
+}

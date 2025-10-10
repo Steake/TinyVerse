@@ -3,19 +3,30 @@
   import { agentStore } from '../../stores/agents';
   import Papa from 'papaparse';
 
-  let extractionFields = [
+  type ExtractionFieldId = 'timestamp' | 'agentId' | 'agentName' | 'action' | 'content' | 'metadata';
+
+  interface ExtractionField {
+    id: ExtractionFieldId;
+    label: string;
+    enabled: boolean;
+  }
+
+  type ExtractionResult = Partial<Record<ExtractionFieldId, string>>;
+
+  let extractionFields: ExtractionField[] = [
     { id: 'timestamp', label: 'Timestamp', enabled: true },
     { id: 'agentId', label: 'Agent ID', enabled: true },
     { id: 'agentName', label: 'Agent Name', enabled: true },
     { id: 'action', label: 'Action', enabled: true },
-    { id: 'data', label: 'Data', enabled: true }
+    { id: 'content', label: 'Content', enabled: true },
+    { id: 'metadata', label: 'Metadata', enabled: false }
   ];
 
   let filterAgent: string = '';
   let filterAction: string = '';
   let startDate: string = '';
   let endDate: string = '';
-  let results: any[] = [];
+  let results: ExtractionResult[] = [];
   let loading = false;
   let error: string | null = null;
 
@@ -38,34 +49,46 @@
     try {
       results = filteredLogs.map(log => {
         const agent = $agentStore.find(a => a.id === log.agentId);
-        const result: any = {};
+        const result: ExtractionResult = {};
+        const timestamp = new Date(log.timestamp);
+        const metadata = log.metadata ?? {};
+        const rawContent = metadata.rawContent ?? null;
 
         extractionFields.forEach(field => {
           if (!field.enabled) return;
 
           switch (field.id) {
             case 'timestamp':
-              result.timestamp = log.timestamp.toISOString();
+              result.timestamp = Number.isNaN(timestamp.getTime())
+                ? log.timestamp
+                : timestamp.toISOString();
               break;
             case 'agentId':
               result.agentId = log.agentId;
               break;
             case 'agentName':
-              result.agentName = agent?.name || 'Unknown';
+              result.agentName = log.agentName || agent?.name || 'Unknown';
               break;
             case 'action':
               result.action = log.action;
               break;
-            case 'data':
-              result.data = JSON.stringify(log.data);
+            case 'content':
+              result.content = log.content ?? '';
+              break;
+            case 'metadata':
+              result.metadata = rawContent
+                ? JSON.stringify(rawContent)
+                : metadata && Object.keys(metadata).length > 0
+                  ? JSON.stringify(metadata)
+                  : '';
               break;
           }
         });
 
         return result;
       });
-    } catch (e: any) {
-      error = e.message || 'Analysis failed';
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Analysis failed';
       results = [];
     } finally {
       loading = false;
@@ -216,7 +239,7 @@
             <tr>
               {#each extractionFields as field}
                 {#if field.enabled}
-                  <td>{result[field.id]}</td>
+                  <td>{result[field.id] ?? ''}</td>
                 {/if}
               {/each}
             </tr>

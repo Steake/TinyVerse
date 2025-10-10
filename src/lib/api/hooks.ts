@@ -2,6 +2,8 @@ import { derived, writable, type Readable } from 'svelte/store';
 import type { ApiResponse, QueryParams } from './types';
 import { api } from './client';
 import type { Agent, Location, SimulationLog } from '../stores/types';
+import type { SimulationStateDTO } from './types';
+import { normalizeSimulationLog } from '../utils/simulation';
 
 interface QueryState<T> {
   data: T | null;
@@ -59,17 +61,30 @@ export function useLocations(params?: QueryParams) {
 }
 
 export function useLogs(filters?: Parameters<typeof api.getLogs>[0]) {
-  return createQuery<SimulationLog[]>(() => api.getLogs(filters));
+  return createQuery<SimulationLog[]>(async () => {
+    const response = await api.getLogs(filters);
+
+    return {
+      ...response,
+      data: (response.data ?? []).map((log, index) =>
+        normalizeSimulationLog(log, index)
+      )
+    };
+  });
 }
 
 export function useSimulationStatus() {
-  const status = createQuery(() => api.getSimulationStatus());
-  
+  const status = createQuery<SimulationStateDTO>(() => api.getSimulationState());
+
   return derived(status, $status => ({
     ...$status,
-    data: $status.data ? {
-      ...$status.data,
-      currentTime: new Date($status.data.currentTime)
-    } : null
+    data: $status.data
+      ? {
+          isRunning: $status.data.is_running,
+          currentStep: $status.data.current_step,
+          agentCount: $status.data.agents_count,
+          worldName: $status.data.world_name
+        }
+      : null
   }));
 }

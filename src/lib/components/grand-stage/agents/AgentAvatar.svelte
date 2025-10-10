@@ -13,6 +13,21 @@
 
   let element: SVGGElement;
 
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      dispatch('click');
+    }
+  };
+
+  const handleFocus = () => {
+    dispatch('mouseenter');
+  };
+
+  const handleBlur = () => {
+    dispatch('mouseleave');
+  };
+
   $: if (element) {
     gsap.to(element, {
       x,
@@ -28,9 +43,16 @@
   class="agent-avatar"
   class:selected
   transform={`translate(${x},${y})`}
+  role="button"
+  tabindex="0"
+  aria-pressed={selected}
+  aria-label={`View ${agent.name}`}
   on:click={() => dispatch('click')}
   on:mouseenter={() => dispatch('mouseenter')}
   on:mouseleave={() => dispatch('mouseleave')}
+  on:focus={handleFocus}
+  on:blur={handleBlur}
+  on:keydown={handleKeydown}
 >
   <circle
     r={NODE_RADIUS}
@@ -58,10 +80,20 @@
   .agent-avatar {
     cursor: pointer;
     transition: transform 0.2s ease-in-out;
+    outline: none;
   }
 
   .agent-avatar:hover {
     transform: scale(1.1);
+  }
+
+  .agent-avatar:focus-visible {
+    transform: scale(1.1);
+  }
+
+  .agent-avatar:focus-visible circle {
+    stroke-width: 3;
+    stroke: hsl(var(--p));
   }
 
   .agent-avatar.selected circle {

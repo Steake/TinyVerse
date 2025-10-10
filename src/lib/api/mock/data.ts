@@ -78,9 +78,10 @@ export const mockConnections: Connection[] = [
 export const mockLogs: SimulationLog[] = [
   {
     id: '1',
-    timestamp: new Date(),
+    timestamp: new Date().toISOString(),
     agentId: '1',
     action: 'MOVE',
-    data: { locationId: '2' }
+    content: 'Agent moved to location 2',
+    metadata: { location: '2' }
   }
 ];

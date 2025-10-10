@@ -33,6 +33,9 @@ from .agent import (
     AutofillRequest,
     AutofillAgentResponse,
     AutofillLocationResponse,
+    ScenarioBeat,
+    AutofillScenarioRequest,
+    AutofillScenarioResponse,
 )
 
 __all__ = [
@@ -69,4 +72,7 @@ __all__ = [
     "AutofillRequest",
     "AutofillAgentResponse",
     "AutofillLocationResponse",
+    "ScenarioBeat",
+    "AutofillScenarioRequest",
+    "AutofillScenarioResponse",
 ]

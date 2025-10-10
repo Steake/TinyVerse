@@ -7,8 +7,29 @@ import type {
   SimulationLogDTO,
   SimulationControlResponseDTO,
   SimulationStateDTO,
+  AutofillRequestPayload,
+  AutofillResponsePayload,
+  FacultyAssignPayload,
+  FacultyUpdatePayload,
+  ToolAssignPayload,
+  ToolUpdatePayload,
+  EpisodicMemoryParams,
+  SemanticMemoryParams,
+  SemanticMemoryQueryPayload,
+  SemanticMemorySummaryPayload,
+  SemanticMemoryIngestPayload,
+  ScenarioAutofillRequestPayload,
+  ScenarioAutofillResponsePayload,
 } from './types';
-import type { Agent, Location } from '../stores/types';
+import type {
+  Agent,
+  Location,
+  MentalFaculty,
+  MentalFacultyDefinition,
+  ToolDefinition,
+  ToolInstance,
+  MemoryEntry
+} from '../stores/types';
 import { ApiError } from './errors';
 import { createConfig } from './config';
 import { buildUrl, delay, isNetworkError, withTimeout } from './utils';
@@ -27,10 +48,12 @@ export class ApiClient {
       params?: QueryParams;
       body?: any;
       headers?: Record<string, string>;
+      timeoutMs?: number;
     } = {}
   ): Promise<ApiResponse<T>> {
-    const { params, body, headers = {} } = options;
+    const { params, body, headers = {}, timeoutMs } = options;
     const url = buildUrl(this.config.baseUrl, path, params);
+    const timeout = timeoutMs ?? this.config.timeout;
 
     const requestInit: RequestInit = {
       method,
@@ -41,13 +64,14 @@ export class ApiClient {
       body: body ? JSON.stringify(body) : undefined
     };
 
-    let lastError: Error | null = null;
+    let lastError: ApiError | null = null;
     
     for (let attempt = 0; attempt <= this.config.retryAttempts; attempt++) {
+      const attemptStartedAt = Date.now();
       try {
         const response = await withTimeout(
           fetch(url, requestInit),
-          this.config.timeout
+          timeout
         );
 
         if (!response.ok) {
@@ -74,17 +98,48 @@ export class ApiClient {
 
         return { data: payload as T };
       } catch (error: any) {
-        lastError = error;
+        const durationMs = Date.now() - attemptStartedAt;
+        const details = {
+          url,
+          method,
+          durationMs,
+          timeoutMs: timeout,
+          attempt
+        };
 
-        if (!isNetworkError(error) || attempt === this.config.retryAttempts) {
-          throw error instanceof ApiError ? error : ApiError.networkError(error);
+        let normalizedError: ApiError;
+
+        if (error instanceof ApiError) {
+          normalizedError = new ApiError(
+            error.code,
+            error.message,
+            error.status,
+            { ...(error.details ?? {}), ...details }
+          );
+        } else if (typeof error?.message === 'string' && error.message.includes('Timeout')) {
+          normalizedError = ApiError.timeoutError(timeout, {
+            ...details,
+            originalError: error.message
+          });
+        } else {
+          normalizedError = ApiError.networkError(error, details);
+        }
+
+        lastError = normalizedError;
+
+        const retryable =
+          (normalizedError.code === 'NETWORK_ERROR' || normalizedError.code === 'TIMEOUT') &&
+          attempt < this.config.retryAttempts;
+
+        if (!retryable) {
+          throw normalizedError;
         }
 
         await delay(this.config.retryDelay * Math.pow(2, attempt));
       }
     }
 
-    throw lastError;
+    throw lastError ?? ApiError.networkError(new Error('Network request failed'));
   }
 
   // Agent endpoints
@@ -106,6 +161,92 @@ export class ApiClient {
 
   async deleteAgent(id: string): Promise<ApiResponse<void>> {
     return this.request<void>('DELETE', `/agents/${id}`);
+  }
+
+  async autofill(payload: AutofillRequestPayload): Promise<ApiResponse<AutofillResponsePayload>> {
+    const timeoutMs = this.config.autofillTimeoutMs ?? Math.max(this.config.timeout, 120000);
+    return this.request<AutofillResponsePayload>('POST', '/autofill', { body: payload, timeoutMs });
+  }
+
+  async autofillScenario(payload: ScenarioAutofillRequestPayload): Promise<ApiResponse<ScenarioAutofillResponsePayload>> {
+    const timeoutMs = this.config.autofillTimeoutMs ?? Math.max(this.config.timeout, 120000);
+    return this.request<ScenarioAutofillResponsePayload>('POST', '/autofill_scenario', { body: payload, timeoutMs });
+  }
+
+  async getFacultyDefinitions(): Promise<ApiResponse<MentalFacultyDefinition[]>> {
+    return this.request<MentalFacultyDefinition[]>('GET', '/agents/faculties/definitions');
+  }
+
+  async getAgentFaculties(agentId: string): Promise<ApiResponse<MentalFaculty[]>> {
+    return this.request<MentalFaculty[]>('GET', `/agents/${agentId}/faculties`);
+  }
+
+  async assignFaculty(agentId: string, payload: FacultyAssignPayload): Promise<ApiResponse<MentalFaculty>> {
+    return this.request<MentalFaculty>('POST', `/agents/${agentId}/faculties`, { body: payload });
+  }
+
+  async updateFaculty(agentId: string, facultyId: string, payload: FacultyUpdatePayload): Promise<ApiResponse<MentalFaculty>> {
+    return this.request<MentalFaculty>('PATCH', `/agents/${agentId}/faculties/${facultyId}`, { body: payload });
+  }
+
+  async deleteFaculty(agentId: string, facultyId: string): Promise<ApiResponse<void>> {
+    return this.request<void>('DELETE', `/agents/${agentId}/faculties/${facultyId}`);
+  }
+
+  async getToolDefinitions(): Promise<ApiResponse<ToolDefinition[]>> {
+    return this.request<ToolDefinition[]>('GET', '/agents/tools/definitions');
+  }
+
+  async getAgentTools(agentId: string): Promise<ApiResponse<ToolInstance[]>> {
+    return this.request<ToolInstance[]>('GET', `/agents/${agentId}/tools`);
+  }
+
+  async assignTool(agentId: string, payload: ToolAssignPayload): Promise<ApiResponse<ToolInstance>> {
+    return this.request<ToolInstance>('POST', `/agents/${agentId}/tools`, { body: payload });
+  }
+
+  async updateTool(agentId: string, toolId: string, payload: ToolUpdatePayload): Promise<ApiResponse<ToolInstance>> {
+    return this.request<ToolInstance>('PATCH', `/agents/${agentId}/tools/${toolId}`, { body: payload });
+  }
+
+  async deleteTool(agentId: string, toolId: string): Promise<ApiResponse<void>> {
+    return this.request<void>('DELETE', `/agents/${agentId}/tools/${toolId}`);
+  }
+
+  async getEpisodicMemory(agentId: string, params: EpisodicMemoryParams = {}): Promise<ApiResponse<MemoryEntry[]>> {
+    const query: QueryParams = {};
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        query[key] = value as any;
+      }
+    });
+    return this.request<MemoryEntry[]>('GET', `/agents/${agentId}/memory/episodic`, { params: query });
+  }
+
+  async clearEpisodicMemory(agentId: string, payload: { max_prefix?: number; max_suffix?: number } = {}): Promise<ApiResponse<void>> {
+    return this.request<void>('POST', `/agents/${agentId}/memory/episodic/clear`, { body: payload });
+  }
+
+  async getSemanticMemory(agentId: string, params: SemanticMemoryParams = {}): Promise<ApiResponse<MemoryEntry[]>> {
+    const query: QueryParams = {};
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        query[key] = value as any;
+      }
+    });
+    return this.request<MemoryEntry[]>('GET', `/agents/${agentId}/memory/semantic`, { params: query });
+  }
+
+  async querySemanticMemory(agentId: string, payload: SemanticMemoryQueryPayload): Promise<ApiResponse<{ matches: unknown[] }>> {
+    return this.request<{ matches: unknown[] }>('POST', `/agents/${agentId}/memory/semantic/query`, { body: payload });
+  }
+
+  async summarizeSemanticMemory(agentId: string, payload: SemanticMemorySummaryPayload): Promise<ApiResponse<{ summary: string }>> {
+    return this.request<{ summary: string }>('POST', `/agents/${agentId}/memory/semantic/summarize`, { body: payload });
+  }
+
+  async ingestSemanticMemory(agentId: string, payload: SemanticMemoryIngestPayload): Promise<ApiResponse<{ status: string }>> {
+    return this.request<{ status: string }>('POST', `/agents/${agentId}/memory/semantic/ingest`, { body: payload });
   }
 
   // Agent relationships

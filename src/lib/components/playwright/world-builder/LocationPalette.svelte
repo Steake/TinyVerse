@@ -119,7 +119,7 @@
   </div>
 </div>
 
-<style>
+<style lang="postcss">
   .card {
     @apply relative;
   }

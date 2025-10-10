@@ -5,6 +5,7 @@ export interface ApiConfiguration {
   retryAttempts: number;
   retryDelay: number;
   headers?: Record<string, string>;
+  autofillTimeoutMs?: number;
 }
 
 // API base URL from environment variable or default to TinyTroupe backend
@@ -17,6 +18,7 @@ export const DEFAULT_CONFIG: ApiConfiguration = {
   timeout: 30000,
   retryAttempts: 3,
   retryDelay: 1000,
+  autofillTimeoutMs: 120000,
   headers: {
     'Content-Type': 'application/json'
   }

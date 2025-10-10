@@ -113,17 +113,17 @@
   </div>
 {/if}
 
-<style>
+<style lang="postcss">
   .modal {
-    @apply fixed inset-0 z-50 flex items-center justify-center;
+    @apply fixed inset-0 z-[1000] flex items-center justify-center;
   }
 
   .modal-backdrop {
-    @apply fixed inset-0 bg-black bg-opacity-50;
+    @apply fixed inset-0 bg-black bg-opacity-50 z-[1000];
   }
 
   .modal-box {
-    @apply bg-base-100 p-6 rounded-lg shadow-xl max-w-md w-full mx-4 z-10;
+    @apply bg-base-100 p-6 rounded-lg shadow-xl max-w-md w-full mx-4 z-[1001];
   }
 
   .modal-body {

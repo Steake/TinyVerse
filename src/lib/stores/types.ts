@@ -22,7 +22,7 @@ export interface Agent {
   relationships?: Relationship[];
   profilePicture?: string;
   emoji?: string;
-  group?: string;
+  group?: string | null;
   x?: number;
   y?: number;
 }
@@ -57,13 +57,35 @@ export interface Location {
   width: number;
   height: number;
   image?: string;
+  zone?: 'interior' | 'exterior' | 'transit';
+  level?: number;
+  features?: LocationFeature[];
 }
 
 export interface Connection {
   id: string;
   source: string;
   target: string;
-  type: 'path' | 'door' | 'portal';
+  type: 'path' | 'door' | 'portal' | 'stairs';
+  label?: string;
+  isDirectional?: boolean;
+}
+
+export interface LocationFeature {
+  id: string;
+  label: string;
+  type:
+    | 'whiteboard'
+    | 'meeting-table'
+    | 'desk-bank'
+    | 'garden'
+    | 'entrance'
+    | 'lounge'
+    | 'display'
+    | 'other';
+  x: number;
+  y: number;
+  notes?: string;
 }
 
 export interface SimulationLogMetadata {
@@ -72,6 +94,9 @@ export interface SimulationLogMetadata {
   rawContent?: Record<string, unknown>;
   source?: string;
   kind?: string;
+  location?: string;
+  title?: string;
+  message?: string;
   [key: string]: unknown;
 }
 
