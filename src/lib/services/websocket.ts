@@ -116,6 +116,12 @@ export class WebSocketService {
         const worldState = get(worldStore);
         if (worldState?.simulationState) {
           simulationStore.syncFromBackend(worldState.simulationState);
+          // Evaluate timeline triggers with current step
+          const { timelineStore } = await import('../stores/timeline');
+          timelineStore.evaluateTriggers({ 
+            step: worldState.simulationState.current_step || 0, 
+            agents: [] 
+          });
         }
         toastStore.info(`Simulation step: ${message.data.step}`);
         // Prefer dialogue WS events; keep logs fetch as fallback if no dialogue is emitted

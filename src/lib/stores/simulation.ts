@@ -152,8 +152,14 @@ function createSimulationStore() {
         applyControlResponse(response.data);
         await fetchLogs();
         
-        // Evaluate beat triggers on simulation start
-        timelineStore.evaluateTriggers({ step: 0, agents: [] });
+        // Evaluate beat triggers on simulation start with actual current step
+        const currentState = await new Promise<SimulationState>((resolve) => {
+          const unsubscribe = subscribe(state => {
+            unsubscribe();
+            resolve(state);
+          });
+        });
+        timelineStore.evaluateTriggers({ step: currentState.currentStep, agents: [] });
       } catch (error: any) {
         update(state => ({ ...state, isRunning: false }));
         console.error('Failed to start simulation', error);
