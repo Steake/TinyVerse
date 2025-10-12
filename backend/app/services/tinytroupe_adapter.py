@@ -1471,19 +1471,17 @@ Respond with ONLY the exact location name from the list above, or "STAY" if they
 Consider: movement verbs (go, walk, move, enter), location mentions, activity context."""
 
                 try:
-                    # Use OpenAI to determine location
-                    import openai
-                    from app.services.custom_openai_client import get_openai_client
+                    # Use TinyTroupe's LLM configuration
+                    from tinytroupe.utils.llm import LLMChat
                     
-                    client = get_openai_client()
-                    response = client.chat.completions.create(
-                        model="gpt-4o-mini",  # Cheap model for location detection
-                        messages=[{"role": "user", "content": prompt}],
-                        temperature=0.3,
-                        max_tokens=50
+                    chat = LLMChat(
+                        system_prompt="You determine agent locations based on their actions. Reply with only the location name or 'STAY'.",
+                        user_prompt=prompt,
+                        output_type=str,
+                        enable_json_output_format=False,
+                        enable_justification_step=False,
                     )
-                    
-                    suggested_location = response.choices[0].message.content.strip()
+                    suggested_location = chat.call().strip()
                     
                     if suggested_location and suggested_location != "STAY":
                         # Find matching location
