@@ -171,6 +171,32 @@ export const timelineStore = {
     });
   },
   /**
+   * Add a new beat to the timeline.
+   */
+  addBeat(beat: StoryBeat) {
+    update((timeline) => ({
+      beats: [...timeline.beats, beat]
+    }));
+  },
+  /**
+   * Update an existing beat.
+   */
+  updateBeat(id: string, updates: Partial<StoryBeat>) {
+    update((timeline) => ({
+      beats: timeline.beats.map(beat =>
+        beat.id === id ? { ...beat, ...updates } : beat
+      )
+    }));
+  },
+  /**
+   * Delete a beat from the timeline.
+   */
+  deleteBeat(id: string) {
+    update((timeline) => ({
+      beats: timeline.beats.filter(beat => beat.id !== id)
+    }));
+  },
+  /**
    * Convenience method for simulation step events.
    */
   onSimulationStep(step: number) {

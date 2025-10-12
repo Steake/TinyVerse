@@ -1,7 +1,12 @@
 <script lang="ts">
   import { timelineStore } from '../../stores/timeline';
+  import type { StoryBeat } from '../../stores/timeline';
+  import BeatEditor from './BeatEditor.svelte';
 
   const timeline = timelineStore;
+
+  let isEditorOpen = false;
+  let editingBeat: StoryBeat | null = null;
 
   $: beats = $timeline.beats ?? [];
   $: totalBeats = beats.length;
@@ -9,6 +14,7 @@
   $: activeBeat = beats.find((beat) => beat.status === 'active');
   $: nextPending = beats.find((beat) => beat.status === 'pending');
   $: progressPercent = totalBeats === 0 ? 0 : Math.round((completedBeats / totalBeats) * 100);
+  $: existingBeatIds = beats.map(b => b.id);
 
   function activateBeat(id: string) {
     timelineStore.markActive(id);
@@ -32,6 +38,50 @@
       timelineStore.markActive(next.id);
     }
   }
+
+  function openCreateBeat() {
+    editingBeat = null;
+    isEditorOpen = true;
+  }
+
+  function openEditBeat(beat: StoryBeat) {
+    editingBeat = beat;
+    isEditorOpen = true;
+  }
+
+  function handleSaveBeat(event: CustomEvent<Partial<StoryBeat>>) {
+    const data = event.detail;
+    
+    if (editingBeat) {
+      // Update existing beat
+      timelineStore.updateBeat(editingBeat.id, data);
+    } else {
+      // Create new beat
+      const newBeat: StoryBeat = {
+        id: `beat-${Date.now()}`,
+        title: data.title || 'Untitled Beat',
+        description: data.description || '',
+        trigger: data.trigger || 'manual',
+        blocking: data.blocking || false,
+        status: 'pending'
+      };
+      timelineStore.addBeat(newBeat);
+    }
+    
+    isEditorOpen = false;
+    editingBeat = null;
+  }
+
+  function handleCancelEdit() {
+    isEditorOpen = false;
+    editingBeat = null;
+  }
+
+  function deleteBeat(id: string) {
+    if (confirm('Delete this story beat? This cannot be undone.')) {
+      timelineStore.deleteBeat(id);
+    }
+  }
 </script>
 
 <section class="timeline-panel">
@@ -48,6 +98,9 @@
     </div>
 
     <div class="actions">
+      <button class="btn btn-xs btn-outline" type="button" on:click={openCreateBeat}>
+        + New Beat
+      </button>
       <button class="btn btn-xs btn-outline" type="button" on:click={activateNext} disabled={!nextPending}>
         Activate next beat
       </button>
@@ -90,6 +143,22 @@
             </div>
 
             <div class="beat-actions">
+              <button 
+                class="btn btn-xs btn-ghost" 
+                type="button" 
+                on:click={() => openEditBeat(beat)}
+                title="Edit beat"
+              >
+                ✏️
+              </button>
+              <button 
+                class="btn btn-xs btn-ghost text-error" 
+                type="button" 
+                on:click={() => deleteBeat(beat.id)}
+                title="Delete beat"
+              >
+                🗑️
+              </button>
               {#if beat.status !== 'active'}
                 <button class="btn btn-xs btn-outline" type="button" on:click={() => activateBeat(beat.id)}>
                   {beat.status === 'pending' ? 'Activate' : 'Revisit'}
@@ -107,6 +176,14 @@
     </ol>
   {/if}
 </section>
+
+<BeatEditor 
+  bind:isOpen={isEditorOpen}
+  beat={editingBeat}
+  existingBeatIds={existingBeatIds}
+  on:save={handleSaveBeat}
+  on:cancel={handleCancelEdit}
+/>
 
 <style lang="postcss">
   .timeline-panel {
