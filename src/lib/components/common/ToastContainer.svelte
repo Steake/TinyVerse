@@ -42,13 +42,15 @@
   .toast-container {
     position: fixed;
     bottom: var(--space-lg);
-    left: 50%;
+    /* Center in the main content area (accounting for 16rem sidebar) */
+    left: calc(16rem + (100vw - 16rem) / 2);
     transform: translateX(-50%);
     z-index: var(--z-toast);
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-    width: calc(100vw - 2 * var(--space-lg));
+    /* Width relative to content area, not full viewport */
+    width: calc(100vw - 16rem - 2 * var(--space-lg));
     max-width: 640px;
     padding: 0 var(--space-sm);
   }

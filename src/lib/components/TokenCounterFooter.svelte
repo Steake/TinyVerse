@@ -14,7 +14,7 @@
   }
 </script>
 
-<footer class="fixed bottom-0 left-0 right-0 bg-base-300/95 backdrop-blur border-t border-base-content/10 px-4 py-2 z-40">
+<footer class="fixed bottom-0 left-64 right-0 bg-base-300/95 backdrop-blur border-t border-base-content/10 px-4 py-2 z-40">
   <div class="container mx-auto flex items-center justify-between text-xs">
     <div class="flex items-center gap-4">
       <div class="tooltip tooltip-top" data-tip="Total tokens consumed this session">
