@@ -11,6 +11,7 @@
 
   const dispatch = createEventDispatcher<{
     edit: Agent;
+    viewDetails: Agent;
   }>();
 
   let isDragOver = false;
@@ -122,6 +123,7 @@
         <AgentCard 
           {agent}
           on:edit={event => dispatch('edit', event.detail)}
+          on:viewDetails={event => dispatch('viewDetails', event.detail)}
           on:dragStart={handleDragStart}
           on:dragEnd={handleDragEnd}
         />

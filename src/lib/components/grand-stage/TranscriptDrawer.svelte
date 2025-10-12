@@ -275,7 +275,7 @@
   }
   
   .resize-line {
-    @apply bg-base-content/20 rounded-full;
+    @apply bg-base-300 rounded-full;
     width: 40px;
     height: 3px;
     transition: background-color 150ms ease;

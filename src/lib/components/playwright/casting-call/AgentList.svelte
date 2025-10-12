@@ -10,6 +10,7 @@
 
   const dispatch = createEventDispatcher<{
     edit: Agent;
+    viewDetails: Agent;
   }>();
 
   let agents: Agent[] = [];
@@ -77,7 +78,7 @@
   </div>
 
   {#each groupedAgents as { group, agents } (group?.id ?? 'ungrouped')}
-    <GroupContainer {group} {agents} on:edit />
+    <GroupContainer {group} {agents} on:edit on:viewDetails />
   {/each}
 
   {#if groupedAgents.every(g => g.agents.length === 0)}

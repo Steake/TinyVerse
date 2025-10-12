@@ -8,6 +8,7 @@
   
   const dispatch = createEventDispatcher<{
     edit: Agent;
+    viewDetails: Agent;
     dragStart: { agent: Agent };
     dragEnd: void;
   }>();
@@ -74,6 +75,15 @@
     aria-label="Edit {agent.name}"
   >
     ✏️
+  </button>
+  
+  <button 
+    class="absolute top-1 left-1 btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-100 transition-opacity"
+    on:click|stopPropagation={() => dispatch('viewDetails', agent)}
+    aria-label="View {agent.name} details"
+    title="View agent details"
+  >
+    👁️
   </button>
 </div>
 

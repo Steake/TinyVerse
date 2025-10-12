@@ -5,6 +5,7 @@
   import AgentForm from './casting-call/AgentForm.svelte';
   import AgentList from './casting-call/AgentList.svelte';
   import GroupCreationControl from './casting-call/GroupCreationControl.svelte';
+  import AgentDetailsPage from '../agents/AgentDetailsPage.svelte';
   import { createNewAgent } from '../../utils/agent';
   import { derived, get } from 'svelte/store';
   import { autofillStore, runGlobalAutofill, applyFields, setBatchCount } from '../../stores/autofill';
@@ -20,6 +21,7 @@
   const batchCountStore = derived(autofillStore, ($s) => $s.batchCounts.agent ?? 1);
   let lastBatchMetadata: Array<{ name: string; metadata: Record<string, unknown> }> = [];
   let search = '';
+  let viewingAgentId: string | null = null;
 
   onMount(async () => {
     // Load agents from backend
@@ -103,9 +105,17 @@
   }
 
   function handleEdit(event: CustomEvent<Agent>) {
-  editingAgent = event.detail;
+    editingAgent = event.detail;
     isEditing = true;
     showForm = true;
+  }
+
+  function handleViewDetails(event: CustomEvent<Agent>) {
+    viewingAgentId = event.detail.id;
+  }
+
+  function closeDetailsPage() {
+    viewingAgentId = null;
   }
 
   async function handleSave(event: CustomEvent<Agent>) {
@@ -216,11 +226,15 @@
       </div>
     {:else}
       <div class="card p-4">
-        <AgentList on:edit={handleEdit} search={search} />
+        <AgentList on:edit={handleEdit} on:viewDetails={handleViewDetails} search={search} />
       </div>
     {/if}
   </div>
 </div>
+
+{#if viewingAgentId}
+  <AgentDetailsPage agentId={viewingAgentId} onClose={closeDetailsPage} />
+{/if}
 
 <style>
   .batch-control {

@@ -152,7 +152,7 @@
   }
 
   .modal-header {
-    @apply flex items-center justify-between p-6 border-b border-base-content/10;
+    @apply flex items-center justify-between p-6 border-b border-base-300;
   }
 
   .modal-header h3 {
@@ -164,6 +164,6 @@
   }
 
   .modal-actions {
-    @apply flex justify-end gap-3 pt-4 border-t border-base-content/10;
+    @apply flex justify-end gap-3 pt-4 border-t border-base-300;
   }
 </style>

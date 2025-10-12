@@ -161,9 +161,12 @@ export interface ToolInstance {
 }
 
 export interface MemoryEntry {
+  id?: string;
   content: string;
   type?: string;
   role?: string;
+  timestamp?: string | Date;
   simulation_timestamp?: string;
+  metadata?: Record<string, unknown>;
   [key: string]: unknown;
 }

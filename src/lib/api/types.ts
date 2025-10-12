@@ -2,7 +2,10 @@ import type {
   Agent,
   Location,
   Connection,
+  MemoryEntry,
 } from '../stores/types';
+
+export type { MemoryEntry } from '../stores/types';
 
 export interface ApiResponse<T> {
   data: T;

@@ -250,6 +250,10 @@ export class ApiClient {
   }
 
   // Agent relationships
+  async getAgentRelationships(agentId: string): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>('GET', `/agents/${agentId}/relationships`);
+  }
+
   async addRelationship(agentId: string, relationship: any): Promise<ApiResponse<Agent>> {
     return this.request<Agent>('POST', `/agents/${agentId}/relationships`, { body: relationship });
   }
