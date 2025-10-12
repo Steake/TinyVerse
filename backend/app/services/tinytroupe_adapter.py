@@ -1364,6 +1364,44 @@ class TinyTroupeAdapter:
         
         return len(self.agent_metadata[agent_id]["relationships"]) < initial_length
     
+    def _ensure_default_locations(self) -> None:
+        """
+        Create default locations if none exist in the database.
+        This ensures agent location tracking has somewhere to place agents.
+        """
+        from app.database import SessionLocal
+        from app.models import Location
+        
+        db = SessionLocal()
+        try:
+            location_count = db.query(Location).count()
+            if location_count > 0:
+                return  # Locations already exist
+            
+            logger.info("No locations found - creating default locations for agent movement")
+            
+            # Create a simple set of default locations in a grid pattern
+            default_locations = [
+                {"name": "Office", "description": "Main office space", "location_type": "indoor", 
+                 "x": 200.0, "y": 200.0, "width": 150.0, "height": 150.0},
+                {"name": "Meeting Room", "description": "Conference room", "location_type": "indoor",
+                 "x": 400.0, "y": 200.0, "width": 150.0, "height": 150.0},
+                {"name": "Cafeteria", "description": "Break room and cafeteria", "location_type": "indoor",
+                 "x": 200.0, "y": 400.0, "width": 150.0, "height": 150.0},
+                {"name": "Lounge", "description": "Relaxation area", "location_type": "indoor",
+                 "x": 400.0, "y": 400.0, "width": 150.0, "height": 150.0},
+                {"name": "Lobby", "description": "Main entrance", "location_type": "indoor",
+                 "x": 300.0, "y": 100.0, "width": 150.0, "height": 80.0},
+            ]
+            
+            for loc_data in default_locations:
+                self.create_location(loc_data)
+            
+            logger.info(f"Created {len(default_locations)} default locations")
+            
+        finally:
+            db.close()
+    
     def run_simulation(self, steps: int = 1, beat_context: Optional[str] = None) -> None:
         """
         Run the simulation for a specified number of steps.
@@ -1377,6 +1415,9 @@ class TinyTroupeAdapter:
 
         if self.simulation_running:
             raise RuntimeError("Simulation is already running")
+
+        # Ensure default locations exist for agent movement
+        self._ensure_default_locations()
 
         self.simulation_running = True
         try:
