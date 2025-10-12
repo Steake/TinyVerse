@@ -30,7 +30,51 @@
   let autoScroll = true;
   let container: HTMLDivElement | null = null;
   let exporting = false;
-  // Use $agentStore directly in the template; avoid local shadowing
+  
+  // Resizable panel state
+  let panelHeight = 300; // Default height in pixels
+  let isResizing = false;
+  let resizeStartY = 0;
+  let resizeStartHeight = 0;
+
+  // Load saved height from localStorage
+  onMount(() => {
+    const saved = localStorage.getItem('transcript-panel-height');
+    if (saved) {
+      panelHeight = parseInt(saved, 10);
+    }
+    refresh();
+  });
+
+  function startResize(event: MouseEvent) {
+    isResizing = true;
+    resizeStartY = event.clientY;
+    resizeStartHeight = panelHeight;
+    event.preventDefault();
+  }
+
+  function handleResize(event: MouseEvent) {
+    if (!isResizing) return;
+    const deltaY = resizeStartY - event.clientY; // Invert because panel grows upward
+    const newHeight = Math.max(150, Math.min(800, resizeStartHeight + deltaY));
+    panelHeight = newHeight;
+    localStorage.setItem('transcript-panel-height', newHeight.toString());
+  }
+
+  function stopResize() {
+    isResizing = false;
+  }
+
+  // Add global mouse listeners for resize
+  $: if (typeof window !== 'undefined') {
+    if (isResizing) {
+      window.addEventListener('mousemove', handleResize);
+      window.addEventListener('mouseup', stopResize);
+    } else {
+      window.removeEventListener('mousemove', handleResize);
+      window.removeEventListener('mouseup', stopResize);
+    }
+  }
 
   const dialogueish = ['TALK','SAY','SPEAK','DIALOG','DIALOGUE','UTTER','MESSAGE','CHAT','UTTERANCE'];
 
@@ -146,7 +190,22 @@
   }
 </script>
 
-<section class="transcript-panel" aria-label="Transcript">
+<section class="transcript-panel">
+  <!-- Resize handle -->
+  {#if open}
+    <div 
+      class="resize-handle" 
+      on:mousedown={startResize}
+      role="separator"
+      aria-valuenow={panelHeight}
+      aria-valuemin={150}
+      aria-valuemax={800}
+      title="Drag to resize"
+    >
+      <div class="resize-line"></div>
+    </div>
+  {/if}
+
   <header class="header">
     <div class="left">
       <button class="btn btn-sm btn-outline" on:click={() => (open = !open)} aria-expanded={open} aria-controls="transcript-body">
@@ -172,7 +231,13 @@
   </header>
 
   {#if open}
-    <div id="transcript-body" class="body" bind:this={container} on:scroll={onScroll}>
+    <div 
+      id="transcript-body" 
+      class="body" 
+      style="height: {panelHeight}px"
+      bind:this={container} 
+      on:scroll={onScroll}
+    >
       {#if filtered.length === 0}
         <div class="empty">No entries yet.</div>
       {:else}
@@ -192,22 +257,65 @@
   .transcript-panel {
     @apply border border-[var(--color-border-subtle)] rounded-xl backdrop-blur-md;
     background-color: var(--color-bg-secondary);
+    position: relative;
   }
+  
+  .resize-handle {
+    @apply absolute top-0 left-0 right-0 cursor-ns-resize;
+    height: 8px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .resize-handle:hover .resize-line,
+  .resize-handle:active .resize-line {
+    @apply bg-primary;
+  }
+  
+  .resize-line {
+    @apply bg-base-content/20 rounded-full;
+    width: 40px;
+    height: 3px;
+    transition: background-color 150ms ease;
+  }
+  
   .header {
     @apply flex items-center justify-between gap-3 px-3 py-2;
+    padding-top: 12px; /* Make room for resize handle */
   }
+  
   .filters {
     @apply flex items-center gap-2;
   }
+  
   .meta {
     @apply text-xs text-[var(--color-text-muted)];
   }
+  
   .body {
-    @apply max-h-56 overflow-auto px-3 py-2 space-y-2 border-t border-[var(--color-border-subtle)];
+    @apply overflow-auto px-3 py-2 space-y-2 border-t border-[var(--color-border-subtle)];
+    /* Height is controlled by inline style */
   }
-  .empty { @apply text-sm text-[var(--color-text-muted)] italic; }
-  .row { @apply grid grid-cols-[auto_auto_1fr] gap-3 items-start text-sm; }
-  .ts { @apply text-[var(--color-text-muted)] tabular-nums; }
-  .agent { @apply font-semibold text-[var(--color-text)]; }
-  .text { @apply text-[var(--color-text)]; }
+  
+  .empty { 
+    @apply text-sm text-[var(--color-text-muted)] italic; 
+  }
+  
+  .row { 
+    @apply grid grid-cols-[auto_auto_1fr] gap-3 items-start text-sm;
+  }
+  
+  .ts { 
+    @apply text-[var(--color-text-muted)] tabular-nums text-xs;
+  }
+  
+  .agent { 
+    @apply font-semibold text-[var(--color-text)] min-w-[100px];
+  }
+  
+  .text { 
+    @apply text-[var(--color-text)];
+  }
 </style>
