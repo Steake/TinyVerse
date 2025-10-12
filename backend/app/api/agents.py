@@ -84,6 +84,111 @@ async def list_agents():
         )
 
 
+# =============================================================================
+# Static routes (must come BEFORE /{agent_id} to avoid path conflicts)
+# =============================================================================
+
+@router.post("/import", response_model=List[Agent], status_code=status.HTTP_201_CREATED)
+async def bulk_import_agents(file: UploadFile = File(...)):
+    """
+    Bulk import agents from JSON file.
+    
+    Accepts a JSON file with an array of agent definitions.
+    """
+    try:
+        content = await file.read()
+        agents_data = json.loads(content)
+        
+        if not isinstance(agents_data, list):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File must contain a JSON array of agents"
+            )
+        
+        created_agents = []
+        for agent_data in agents_data:
+            try:
+                agent = adapter.create_agent(agent_data)
+                created_agents.append(agent)
+            except Exception as e:
+                # Log error but continue with other agents
+                print(f"Failed to import agent: {str(e)}")
+        
+        await broadcast_simulation_event("agents_imported", {
+            "count": len(created_agents)
+        })
+        
+        return created_agents
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid JSON file"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to import agents: {str(e)}"
+        )
+
+
+@router.get("/export")
+async def bulk_export_agents():
+    """
+    Bulk export all agents to JSON file.
+    
+    Returns a downloadable JSON file with all agents.
+    """
+    try:
+        agents = adapter.list_agents()
+        
+        # Convert to JSON string
+        json_str = json.dumps(agents, indent=2, default=str)
+        
+        # Create in-memory file
+        json_bytes = io.BytesIO(json_str.encode('utf-8'))
+        
+        return StreamingResponse(
+            json_bytes,
+            media_type="application/json",
+            headers={
+                "Content-Disposition": "attachment; filename=agents_export.json"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export agents: {str(e)}"
+        )
+
+
+@router.get("/faculties/definitions", response_model=List[MentalFacultyDefinition])
+async def get_faculty_definitions():
+    """List all available mental faculty definitions."""
+    try:
+        return adapter.list_faculty_definitions()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list faculty definitions: {str(e)}"
+        )
+
+
+@router.get("/tools/definitions", response_model=List[ToolDefinition])
+async def get_tool_definitions():
+    """List all available tool definitions."""
+    try:
+        return adapter.list_tool_definitions()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list tool definitions: {str(e)}"
+        )
+
+
+# =============================================================================
+# Dynamic agent routes (/{agent_id} routes come AFTER static routes)
+# =============================================================================
+
 @router.get("/{agent_id}", response_model=Agent)
 async def get_agent(agent_id: str):
     """
@@ -185,91 +290,6 @@ async def delete_agent(agent_id: str):
     })
     
     return None
-
-
-@router.post("/import", response_model=List[Agent], status_code=status.HTTP_201_CREATED)
-async def bulk_import_agents(file: UploadFile = File(...)):
-    """
-    Bulk import agents from JSON file.
-    
-    Accepts a JSON file with an array of agent definitions.
-    """
-    try:
-        content = await file.read()
-        agents_data = json.loads(content)
-        
-        if not isinstance(agents_data, list):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="File must contain a JSON array of agents"
-            )
-        
-        created_agents = []
-        for agent_data in agents_data:
-            try:
-                agent = adapter.create_agent(agent_data)
-                created_agents.append(agent)
-            except Exception as e:
-                # Log error but continue with other agents
-                print(f"Failed to import agent: {str(e)}")
-        
-        await broadcast_simulation_event("agents_imported", {
-            "count": len(created_agents)
-        })
-        
-        return created_agents
-    except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid JSON file"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to import agents: {str(e)}"
-        )
-
-
-@router.get("/export")
-async def bulk_export_agents():
-    """
-    Bulk export all agents to JSON file.
-    
-    Returns a downloadable JSON file with all agents.
-    """
-    try:
-        agents = adapter.list_agents()
-        
-        # Convert to JSON string
-        json_str = json.dumps(agents, indent=2, default=str)
-        
-        # Create in-memory file
-        json_bytes = io.BytesIO(json_str.encode('utf-8'))
-        
-        return StreamingResponse(
-            json_bytes,
-            media_type="application/json",
-            headers={
-                "Content-Disposition": "attachment; filename=agents_export.json"
-            }
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to export agents: {str(e)}"
-        )
-
-
-@router.get("/faculties/definitions", response_model=List[MentalFacultyDefinition])
-async def get_faculty_definitions():
-    """List all available mental faculty definitions."""
-    try:
-        return adapter.list_faculty_definitions()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list faculty definitions: {str(e)}"
-        )
 
 
 @router.get("/{agent_id}/faculties", response_model=List[MentalFacultyInstance])
@@ -377,18 +397,6 @@ async def delete_mental_faculty(agent_id: str, faculty_id: str):
             detail=f"Failed to delete mental faculty: {str(e)}"
         )
     return None
-
-
-@router.get("/tools/definitions", response_model=List[ToolDefinition])
-async def get_tool_definitions():
-    """List available cognitive tools."""
-    try:
-        return adapter.list_tool_definitions()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list tool definitions: {str(e)}"
-        )
 
 
 @router.get("/{agent_id}/tools", response_model=List[ToolInstance])
