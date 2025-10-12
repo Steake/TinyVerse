@@ -1420,7 +1420,10 @@ Consider how your character would naturally respond to this situation.
             # Get all locations for context
             locations = db.query(Location).all()
             if not locations:
+                logger.info("No locations in database - skipping agent location updates")
                 return  # No locations to move to
+            
+            logger.info(f"Updating agent locations - {len(locations)} locations available")
             
             location_context = "\n".join([
                 f"- {loc.name} ({loc.location_type}): {loc.description or 'No description'}"
@@ -1430,6 +1433,8 @@ Consider how your character would naturally respond to this situation.
             # Get recent communications for each agent
             communications = getattr(self.world, "_displayed_communications_buffer", [])
             recent_comms = communications[-20:] if len(communications) > 20 else communications
+            
+            logger.info(f"Found {len(communications)} total communications, analyzing {len(recent_comms)} recent")
             
             # Group by agent
             agent_actions = {}
@@ -1445,6 +1450,8 @@ Consider how your character would naturally respond to this situation.
                 rendering = comm.get("rendering", "")
                 if rendering:
                     agent_actions[agent_name].append(rendering)
+            
+            logger.info(f"Processing location updates for {len(agent_actions)} agents with actions")
             
             # For each agent with actions, determine if they should move
             for agent_name, actions in agent_actions.items():

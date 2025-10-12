@@ -295,8 +295,11 @@
   }
   
   .body {
-    @apply overflow-auto px-3 py-2 space-y-2 border-t border-[var(--color-border-subtle)];
+    @apply overflow-auto px-3 space-y-2 border-t border-[var(--color-border-subtle)];
     /* Height is controlled by inline style */
+    /* Add padding to prevent footer from obscuring content */
+    padding-top: 0.5rem;
+    padding-bottom: 60px; /* Space for fixed footer */
   }
   
   .empty { 

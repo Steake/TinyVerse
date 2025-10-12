@@ -112,6 +112,9 @@
       // Update agent positions based on their locations
       if (state.simulationState.agent_locations && locations.length > 0) {
         const agentLocations = state.simulationState.agent_locations;
+        const locationCount = Object.keys(agentLocations).length;
+        console.log(`[GrandStage] Updating positions for ${locationCount} agents, ${locations.length} locations available`);
+        
         for (const [agentId, locationId] of Object.entries(agentLocations)) {
           // Find location coordinates
           const location = locations.find((loc: any) => loc.id === locationId);
@@ -119,13 +122,18 @@
             // Position agent at location with slight random offset to avoid overlap
             const offsetX = (Math.random() - 0.5) * 40; // +/- 20px
             const offsetY = (Math.random() - 0.5) * 40;
+            console.log(`[GrandStage] Moving agent ${agentId} to location ${location.name} (${location.x + offsetX}, ${location.y + offsetY})`);
             stageStore.updateAgentPosition(
               agentId as string, 
               location.x + offsetX, 
               location.y + offsetY
             );
+          } else {
+            console.warn(`[GrandStage] Location ${locationId} not found or has no coordinates for agent ${agentId}`);
           }
         }
+      } else if (state.simulationState.agent_locations) {
+        console.warn(`[GrandStage] Agent locations available but no locations loaded (${locations.length})`);
       }
     }
   });
