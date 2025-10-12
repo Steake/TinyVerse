@@ -62,7 +62,7 @@
   }
 </script>
 
-<div role="main" id="app-shell" class="h-screen w-screen flex bg-[var(--color-bg-app)] m-0 p-0 max-w-none gap-0">
+<div role="main" id="app-shell" class="h-screen flex bg-[var(--color-bg-app)] m-0 p-0 max-w-none gap-0">
   <Sidebar bind:activeSection />
   
   <div class="flex-1 min-w-0 flex flex-col overflow-hidden bg-[var(--color-bg-primary)]">
