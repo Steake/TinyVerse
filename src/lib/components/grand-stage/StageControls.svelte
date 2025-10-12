@@ -126,6 +126,23 @@
     </div>
   </div>
 
+  <div class="status-display">
+    <div class="stat-item">
+      <div class="stat-label">Simulation Time</div>
+      <div class="stat-value">{formatTime($simulation.currentTime)}</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Environment</div>
+      <div class="stat-value">
+        {#if weather === 'sunny'}☀️ Sunny{:else if weather === 'rainy'}🌧️ Rainy{:else}☁️ Cloudy{/if}
+      </div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Step</div>
+      <div class="stat-value">#{$simulation.currentStep}</div>
+    </div>
+  </div>
+
   <div class="playback-controls">
     <div class="btn-group">
       <button class="btn btn-sm btn-outline" on:click={handleResetView} title="Reset view" aria-label="Reset view">↺</button>
@@ -202,6 +219,33 @@
     align-items: center;
   }
 
+  .status-display {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgba(226, 232, 240, 0.6);
+    font-weight: 500;
+  }
+
+  .stat-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.95);
+    font-variant-numeric: tabular-nums;
+  }
+
   .playback-controls {
     margin-left: auto;
     display: inline-flex;
@@ -224,6 +268,7 @@
     }
 
     .environment-controls,
+    .status-display,
     .playback-controls {
       width: 100%;
       justify-content: space-between;
