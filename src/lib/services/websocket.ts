@@ -4,6 +4,7 @@
 
 import { agentStore } from '../stores/agents';
 import { worldStore } from '../stores/world';
+import { simulationStore } from '../stores/simulation';
 import { toastStore } from '../stores/toast';
 import { stageStore } from '../stores/stage';
 import { api } from '../api';
@@ -50,10 +51,10 @@ export class WebSocketService {
         toastStore.success('Connected to simulation server');
       };
 
-      this.ws.onmessage = (event) => {
+      this.ws.onmessage = async (event) => {
         try {
           const message: WebSocketEvent = JSON.parse(event.data);
-          this.handleMessage(message);
+          await this.handleMessage(message);
         } catch (error) {
           console.error('Failed to parse WebSocket message:', error);
         }
@@ -73,7 +74,7 @@ export class WebSocketService {
     }
   }
 
-  private handleMessage(message: WebSocketEvent): void {
+  private async handleMessage(message: WebSocketEvent): Promise<void> {
     console.log('WebSocket message:', message);
 
     switch (message.type) {
@@ -109,8 +110,13 @@ export class WebSocketService {
         break;
 
       case 'simulation_step':
-        // Refresh simulation state
-        worldStore.fetchSimulationState();
+        // Refresh simulation state and sync to simulationStore
+        await worldStore.fetchSimulationState();
+        // Sync worldStore.simulationState to simulationStore for consistent UI state
+        const worldState = get(worldStore);
+        if (worldState?.simulationState) {
+          simulationStore.syncFromBackend(worldState.simulationState);
+        }
         toastStore.info(`Simulation step: ${message.data.step}`);
         // Prefer dialogue WS events; keep logs fetch as fallback if no dialogue is emitted
         // this.fetchAndProjectLogs(); // commented out once backend reliably emits 'dialogue'

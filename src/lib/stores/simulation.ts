@@ -180,7 +180,8 @@ function createSimulationStore() {
         toastStore.error('Failed to pause simulation');
         throw error;
       } finally {
-        update(state => ({ ...state, isRunning: false, isBusy: false }));
+        // Don't override isRunning - trust backend state from applyControlResponse
+        update(state => ({ ...state, isBusy: false }));
       }
     },
 
@@ -285,6 +286,19 @@ function createSimulationStore() {
 
     refresh: async () => {
       await Promise.all([fetchState(), fetchLogs()]);
+    },
+
+    /**
+     * Sync simulation state from backend (e.g., via WebSocket events)
+     * to keep UI state consistent with actual simulation state
+     */
+    syncFromBackend: (backendState: { is_running: boolean; current_step: number; agents_count: number }) => {
+      update(state => ({
+        ...state,
+        isRunning: backendState.is_running,
+        currentStep: backendState.current_step,
+        agentCount: backendState.agents_count
+      }));
     }
   };
 }
