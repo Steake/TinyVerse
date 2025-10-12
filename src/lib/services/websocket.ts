@@ -84,6 +84,17 @@ export class WebSocketService {
         agentStore.fetchAgents();
         break;
 
+      case 'agent_moved':
+        // Update agent position on stage
+        if (message.data?.agent_id && message.data?.position) {
+          stageStore.updateAgentPosition(
+            message.data.agent_id,
+            message.data.position.x,
+            message.data.position.y
+          );
+        }
+        break;
+
       case 'location_created':
       case 'location_updated':
       case 'location_deleted':

@@ -116,7 +116,57 @@ async def update_agent(agent_id: str, agent: AgentUpdate):
     return updated_agent
 
 
+@router.patch("/{agent_id}/location", response_model=Agent)
+async def update_agent_location(agent_id: str, location_data: Dict[str, Any]):
+    """
+    Update agent's current location.
+    
+    Moves the agent to a specified location and broadcasts the update.
+    Expects: { "location_id": "location-123" }
+    """
+    location_id = location_data.get("location_id")
+    
+    if not location_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="location_id is required"
+        )
+    
+    # Verify location exists
+    from app.database import SessionLocal
+    from app.models import Location
+    
+    db = SessionLocal()
+    try:
+        location = db.query(Location).filter(Location.id == location_id).first()
+        if not location:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Location {location_id} not found"
+            )
+        
+        # Update agent location
+        updated_agent = adapter.update_agent(agent_id, {"current_location": location_id})
+        if not updated_agent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Agent {agent_id} not found"
+            )
+        
+        # Broadcast movement event with location coordinates
+        await broadcast_simulation_event("agent_moved", {
+            "agent_id": agent_id,
+            "location_id": location_id,
+            "position": {"x": location.x, "y": location.y}
+        })
+        
+        return updated_agent
+    finally:
+        db.close()
+
+
 @router.delete("/{agent_id}", status_code=status.HTTP_204_NO_CONTENT)
+
 async def delete_agent(agent_id: str):
     """
     Delete an agent.

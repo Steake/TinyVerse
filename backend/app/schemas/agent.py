@@ -31,6 +31,8 @@ class AgentCreate(BaseModel):
     personal_interests: List[str] = Field(default_factory=list)
     skills: List[SkillCreate] = Field(default_factory=list)
     backstory: Optional[str] = None
+    current_location: Optional[str] = None
+    group: Optional[str] = None
 
 
 class Agent(AgentCreate):
@@ -54,6 +56,8 @@ class AgentUpdate(BaseModel):
     personal_interests: Optional[List[str]] = None
     skills: Optional[List[SkillCreate]] = None
     backstory: Optional[str] = None
+    current_location: Optional[str] = None
+    group: Optional[str] = None
 
 
 class LocationCreate(BaseModel):

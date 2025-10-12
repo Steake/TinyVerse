@@ -23,6 +23,10 @@ class Agent(Base):
     personal_interests = Column(JSON, default=list)  # List of strings
     backstory = Column(Text, nullable=True)
     
+    # Location tracking
+    current_location = Column(String, nullable=True)  # Location ID where agent currently is
+    group = Column(String, nullable=True)  # Group/team ID for organization
+    
     # TinyTroupe state
     tinytroupe_state = Column(JSON, nullable=True)  # Serialized TinyPerson state
     

@@ -1389,8 +1389,138 @@ Consider how your character would naturally respond to this situation.
             
             self.world.run(steps)
             self.current_step += steps
+            
+            # Update agent locations based on recent actions
+            self._update_agent_locations_from_actions()
         finally:
             self.simulation_running = False
+    
+    def _update_agent_locations_from_actions(self) -> None:
+        """
+        Analyze recent agent actions and update their locations intelligently using LLM.
+        
+        This method looks at the last few actions for each agent and asks an LLM to determine
+        if the agent should move to a different location based on their behavior.
+        """
+        from app.database import SessionLocal
+        from app.models import Agent as DBAgent, Location
+        
+        db = SessionLocal()
+        try:
+            # Get all locations for context
+            locations = db.query(Location).all()
+            if not locations:
+                return  # No locations to move to
+            
+            location_context = "\n".join([
+                f"- {loc.name} ({loc.location_type}): {loc.description or 'No description'}"
+                for loc in locations
+            ])
+            
+            # Get recent communications for each agent
+            communications = getattr(self.world, "_displayed_communications_buffer", [])
+            recent_comms = communications[-20:] if len(communications) > 20 else communications
+            
+            # Group by agent
+            agent_actions = {}
+            for comm in recent_comms:
+                agent_name = comm.get("source")
+                if not agent_name or agent_name not in self._agent_name_to_id:
+                    continue
+                
+                if agent_name not in agent_actions:
+                    agent_actions[agent_name] = []
+                
+                # Extract action description
+                rendering = comm.get("rendering", "")
+                if rendering:
+                    agent_actions[agent_name].append(rendering)
+            
+            # For each agent with actions, determine if they should move
+            for agent_name, actions in agent_actions.items():
+                if not actions:
+                    continue
+                
+                agent_id = self._agent_name_to_id.get(agent_name)
+                if not agent_id:
+                    continue
+                
+                db_agent = db.query(DBAgent).filter(DBAgent.id == agent_id).first()
+                if not db_agent:
+                    continue
+                
+                # Build prompt for LLM
+                actions_summary = "\n".join([f"  - {action}" for action in actions[-5:]])  # Last 5 actions
+                current_loc_name = "Unknown"
+                if db_agent.current_location:
+                    current_loc = db.query(Location).filter(Location.id == db_agent.current_location).first()
+                    if current_loc:
+                        current_loc_name = current_loc.name
+                
+                prompt = f"""Based on the following recent actions by {agent_name}, determine which location they should currently be at.
+
+Current location: {current_loc_name}
+
+Available locations:
+{location_context}
+
+Recent actions:
+{actions_summary}
+
+Respond with ONLY the exact location name from the list above, or "STAY" if they should remain at their current location.
+Consider: movement verbs (go, walk, move, enter), location mentions, activity context."""
+
+                try:
+                    # Use OpenAI to determine location
+                    import openai
+                    from app.services.custom_openai_client import get_openai_client
+                    
+                    client = get_openai_client()
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",  # Cheap model for location detection
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.3,
+                        max_tokens=50
+                    )
+                    
+                    suggested_location = response.choices[0].message.content.strip()
+                    
+                    if suggested_location and suggested_location != "STAY":
+                        # Find matching location
+                        target_loc = None
+                        for loc in locations:
+                            if loc.name.lower() == suggested_location.lower():
+                                target_loc = loc
+                                break
+                        
+                        if target_loc and target_loc.id != db_agent.current_location:
+                            logger.info(f"Moving {agent_name} from {current_loc_name} to {target_loc.name}")
+                            db_agent.current_location = target_loc.id
+                            db.commit()
+                            
+                            # Broadcast movement event (import here to avoid circular dependency)
+                            import asyncio
+                            from app.api.websocket import broadcast_simulation_event
+                            
+                            # Run async broadcast in sync context
+                            try:
+                                loop = asyncio.get_event_loop()
+                            except RuntimeError:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                            
+                            loop.run_until_complete(broadcast_simulation_event("agent_moved", {
+                                "agent_id": agent_id,
+                                "location_id": target_loc.id,
+                                "position": {"x": target_loc.x, "y": target_loc.y}
+                            }))
+                
+                except Exception as e:
+                    logger.warning(f"Failed to update location for {agent_name}: {e}")
+                    continue
+        
+        finally:
+            db.close()
     
     def pause_simulation(self) -> None:
         """Pause the simulation."""
