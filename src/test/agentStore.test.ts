@@ -1,12 +1,40 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
 import { agentStore } from '../lib/stores/agents';
 import type { Agent } from '../lib/stores/types';
 
+vi.mock('../lib/api', () => {
+  return {
+    api: {
+      createAgent: vi.fn(async (payload: any) => ({ data: { id: 'test-1', ...payload } })),
+      updateAgent: vi.fn(async (id: string, payload: any) => ({ data: { id, ...payload } })),
+      deleteAgent: vi.fn(async (_id: string) => ({ data: undefined }))
+    }
+  };
+});
+
+vi.mock('../lib/stores/toast', () => ({
+  toastStore: {
+    success: vi.fn(),
+    error: vi.fn()
+  }
+}));
+
+vi.mock('../lib/stores/loading', () => ({
+  loadingStore: {
+    start: vi.fn(),
+    stop: vi.fn()
+  }
+}));
+
 describe('agentStore', () => {
-  it('adds an agent', () => {
-    const testAgent: Agent = {
-      id: 'test-1',
+  beforeEach(() => {
+    // Reset store to empty before each test
+    (agentStore as any).seed([]);
+  });
+
+  it('adds an agent', async () => {
+    const testAgent: Omit<Agent, 'id' | 'created_at'> = {
       name: 'Test Agent',
       age: 30,
       occupation: 'Tester',
@@ -23,34 +51,62 @@ describe('agentStore', () => {
       emoji: '🧪'
     };
 
-    agentStore.addAgent(testAgent);
+    await agentStore.addAgent(testAgent);
     const agents = get(agentStore);
     
-    expect(agents).toContainEqual(testAgent);
+    expect(agents.find(a => a.id === 'test-1')?.name).toBe('Test Agent');
   });
 
-  it('updates an agent', () => {
+  it('updates an agent', async () => {
+    await agentStore.addAgent({
+      name: 'Original',
+      age: 1,
+      occupation: '',
+      occupation_description: '',
+      nationality: '',
+      country_of_residence: '',
+      routines: [],
+      personality_traits: [],
+      professional_interests: [],
+      personal_interests: [],
+      skills: [],
+      relationships: [],
+      backstory: '',
+      emoji: '😀'
+    });
     const agents = get(agentStore);
-    if (agents.length > 0) {
-      const agent = agents[0];
-      const updatedAgent = { ...agent, name: 'Updated Name' };
-      
-      agentStore.updateAgent(updatedAgent);
-      const newAgents = get(agentStore);
-      
-      expect(newAgents.find(a => a.id === agent.id)?.name).toBe('Updated Name');
-    }
+    const agent = agents[0];
+    const updatedAgent = { ...agent, name: 'Updated Name' } as Agent;
+    
+    await agentStore.updateAgent(updatedAgent);
+    const newAgents = get(agentStore);
+    
+    expect(newAgents.find(a => a.id === agent.id)?.name).toBe('Updated Name');
   });
 
-  it('removes an agent', () => {
+  it('removes an agent', async () => {
+    await agentStore.addAgent({
+      name: 'To Remove',
+      age: 1,
+      occupation: '',
+      occupation_description: '',
+      nationality: '',
+      country_of_residence: '',
+      routines: [],
+      personality_traits: [],
+      professional_interests: [],
+      personal_interests: [],
+      skills: [],
+      relationships: [],
+      backstory: '',
+      emoji: '😀'
+    });
     const agents = get(agentStore);
-    if (agents.length > 0) {
-      const agentId = agents[0].id;
-      
-      agentStore.removeAgent(agentId);
-      const newAgents = get(agentStore);
-      
-      expect(newAgents.find(a => a.id === agentId)).toBeUndefined();
-    }
+    const agentId = agents[0].id;
+    
+    await agentStore.removeAgent(agentId);
+    const newAgents = get(agentStore);
+    
+    expect(newAgents.find(a => a.id === agentId)).toBeUndefined();
   });
 });

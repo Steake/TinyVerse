@@ -12,23 +12,32 @@ export function unwrapCodeFence(value: string): string {
 export function normalizeJsonInput(raw: string): string {
   const unwrapped = unwrapCodeFence(raw);
   try {
-    return jsonrepair(unwrapped);
+    const repaired = jsonrepair(unwrapped);
+    return repaired;
   } catch (error) {
-    console.warn('Failed to repair JSON payload', error);
+    console.warn('[jsonParsing] Failed to repair JSON:', error);
     return unwrapped;
   }
 }
 
 export function parseJson<T>(input: any): T | undefined {
   if (input === undefined || input === null) return undefined;
+  
+  // If already an object, return as-is
+  if (typeof input === 'object') {
+    return input as T;
+  }
+  
   if (typeof input === 'string') {
     try {
       const normalized = normalizeJsonInput(input);
-      return JSON.parse(normalized) as T;
+      const parsed = JSON.parse(normalized) as T;
+      return parsed;
     } catch (error) {
-      console.warn('Failed to parse JSON payload', error);
+      console.warn('[jsonParsing] Failed to parse:', error);
       return undefined;
     }
   }
+  
   return input as T;
 }

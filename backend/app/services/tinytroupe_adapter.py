@@ -78,6 +78,8 @@ class TinyTroupeAdapter:
         self.agent_faculty_index: Dict[str, List[str]] = {}
         self.tools_registry: Dict[str, Dict[str, Any]] = {}
         self.agent_tool_index: Dict[str, List[str]] = {}
+        # Track last index of communications broadcasted over websocket
+        self._last_broadcast_index: int = 0
 
     def _build_faculty_catalog(self) -> Dict[str, Dict[str, Any]]:
         """Return the base catalogue of supported mental faculties."""
@@ -825,12 +827,28 @@ class TinyTroupeAdapter:
         for entry in entries:
             if isinstance(entry, dict):
                 item = dict(entry)
+                
+                # Ensure 'content' field exists (required by MemoryEntry schema)
+                if "content" not in item:
+                    # Try to extract content from common fields
+                    content = (
+                        item.get("text") or 
+                        item.get("description") or 
+                        item.get("message") or 
+                        str(item.get("role", "")) + ": " + str(item.get("data", "")) if "data" in item else
+                        str(item)
+                    )
+                    item["content"] = content
+                
+                # Convert datetime to ISO string
                 timestamp = item.get("simulation_timestamp")
                 if isinstance(timestamp, datetime):
                     item["simulation_timestamp"] = timestamp.isoformat()
+                    
                 normalized.append(item)
             else:
-                normalized.append({"content": entry})
+                # Non-dict entry: wrap in content field
+                normalized.append({"content": str(entry)})
         return normalized
 
     # ---------------------------------------------------------------------
@@ -1329,12 +1347,13 @@ class TinyTroupeAdapter:
         
         return len(self.agent_metadata[agent_id]["relationships"]) < initial_length
     
-    def run_simulation(self, steps: int = 1) -> None:
+    def run_simulation(self, steps: int = 1, beat_context: Optional[str] = None) -> None:
         """
         Run the simulation for a specified number of steps.
         
         Args:
             steps: Number of simulation steps to run
+            beat_context: Optional narrative context to broadcast to agents before running
         """
         if steps is None or steps < 1:
             raise ValueError("Simulation steps must be a positive integer")
@@ -1344,6 +1363,18 @@ class TinyTroupeAdapter:
 
         self.simulation_running = True
         try:
+            # Inject narrative beat context if provided
+            if beat_context:
+                logger.info(f"Broadcasting narrative context to agents: {beat_context}")
+                narrative_prompt = f"""
+[NARRATIVE CONTEXT]
+{beat_context}
+
+Focus your actions and decisions on contributing to this dramatic moment in the story.
+Consider how your character would naturally respond to this situation.
+"""
+                self.world.broadcast(narrative_prompt)
+            
             self.world.run(steps)
             self.current_step += steps
         finally:
@@ -1590,6 +1621,40 @@ class TinyTroupeAdapter:
             "content": content_text,
             "metadata": metadata,
         }
+
+    def consume_new_logs(self, only_dialogue: bool = True) -> List[Dict[str, Any]]:
+        """
+        Return new log entries since the last broadcast and advance the broadcast index.
+
+        Args:
+            only_dialogue: If True, return only dialogue-like entries (TALK/SAY/CHAT/etc.).
+
+        Returns:
+            List of log dicts as produced by _convert_communication_to_log
+        """
+        communications = getattr(self.world, "_displayed_communications_buffer", [])
+        start = min(self._last_broadcast_index, len(communications))
+        new_items = communications[start:]
+
+        results: List[Dict[str, Any]] = []
+        dialogueish = {"TALK", "SAY", "SPEAK", "DIALOG", "DIALOGUE", "MESSAGE", "CHAT", "UTTER", "UTTERANCE"}
+        for c in new_items:
+            log = self._convert_communication_to_log(c)
+            if not log:
+                continue
+            if only_dialogue:
+                action = (log.get("action_type") or "").upper()
+                if not any(k in action for k in dialogueish):
+                    continue
+            # normalize timestamp to iso string for JSON
+            ts = log.get("timestamp")
+            if hasattr(ts, "isoformat"):
+                log["timestamp"] = ts.isoformat()
+            results.append(log)
+
+        # advance index
+        self._last_broadcast_index = len(communications)
+        return results
 
 
 # Global adapter instance

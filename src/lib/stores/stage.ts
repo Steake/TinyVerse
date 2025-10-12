@@ -19,10 +19,25 @@ function createStageStore() {
         }
       })),
     addInteraction: (interaction: Interaction) =>
-      update(state => ({
-        ...state,
-        currentInteractions: [...state.currentInteractions, interaction]
-      })),
+      update(state => {
+        const updated = [...state.currentInteractions, interaction];
+        const CAP = 3;
+        // Keep only the latest CAP interactions per primary participant
+        const perAgent: Record<string, number> = {};
+        const pruned: Interaction[] = [];
+        // iterate from newest to oldest to keep newest first
+        for (let i = updated.length - 1; i >= 0; i--) {
+          const it = updated[i];
+          const agentId = it.participants?.[0] ?? '';
+          perAgent[agentId] = (perAgent[agentId] ?? 0);
+          if (perAgent[agentId] < CAP) {
+            pruned.push(it);
+            perAgent[agentId]++;
+          }
+        }
+        pruned.reverse();
+        return { ...state, currentInteractions: pruned };
+      }),
     removeInteraction: (interactionId: string) =>
       update(state => ({
         ...state,

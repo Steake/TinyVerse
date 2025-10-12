@@ -5,9 +5,6 @@ import type { AutofillScope } from '../stores/autofill';
 type AutofillElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
 type Seed = Record<string, unknown> | (() => Record<string, unknown> | undefined) | undefined;
 
-const BUTTON_IDLE_TEXT = '✨ Autofill';
-const DEFAULT_HINT = 'Uses the global prompt when left blank.';
-
 const SCOPES: ReadonlySet<string> = new Set(['agent', 'location', 'environment', 'story', 'generic']);
 
 export interface AutofillOptions {
@@ -17,6 +14,7 @@ export interface AutofillOptions {
   prompt?: string;
   onValue?: (value: any) => void;
   hint?: string;
+  icon?: string;
 }
 
 function resolveScope(node: AutofillElement, options: AutofillOptions): AutofillScope {
@@ -69,91 +67,95 @@ function applyValue(node: AutofillElement, value: any) {
   node.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+const SUCCESS_RESET_MS = 2400;
+
 export const autofill: Action<AutofillElement, AutofillOptions | undefined> = (node, opts) => {
   let options: AutofillOptions = { ...opts };
   let loading = false;
-  let feedbackTimer: number | undefined;
+  let resetTimer: number | undefined;
 
-  node.classList.add('autofill-target');
+  const originalParent = node.parentNode as Node | null;
+  const originalNextSibling = node.nextSibling;
 
-  const panel = document.createElement('div');
-  panel.className = 'autofill-panel';
+  const baseIcon = () => options.icon ?? '✨';
 
-  const controls = document.createElement('div');
-  controls.className = 'autofill-controls';
-
-  const promptInput = document.createElement('input');
-  promptInput.type = 'text';
-  promptInput.className = 'input input-bordered input-sm autofill-prompt';
-  promptInput.placeholder = 'Custom prompt (optional)';
-  if (options.prompt) {
-    promptInput.value = options.prompt;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'autofill-wrapper';
+  if (node instanceof HTMLTextAreaElement) {
+    wrapper.classList.add('autofill-wrapper--textarea');
   }
 
   const trigger = document.createElement('button');
   trigger.type = 'button';
-  trigger.className = 'btn btn-sm btn-secondary autofill-trigger';
-  trigger.setAttribute('aria-label', 'Autofill this field');
-  trigger.textContent = BUTTON_IDLE_TEXT;
+  trigger.className = 'autofill-chip';
+  trigger.dataset.state = 'idle';
+  trigger.textContent = baseIcon();
 
-  const status = document.createElement('div');
+  const status = document.createElement('span');
   status.className = 'autofill-status';
-  status.textContent = 'Generating suggestion…';
-  status.dataset.visible = 'false';
+  status.setAttribute('aria-live', 'polite');
+  status.textContent = '';
 
-  const hint = document.createElement('div');
-  hint.className = 'autofill-hint';
-  hint.textContent = options.hint ?? DEFAULT_HINT;
-
-  controls.appendChild(promptInput);
-  controls.appendChild(trigger);
-  panel.appendChild(controls);
-  panel.appendChild(status);
-  panel.appendChild(hint);
-
-  node.insertAdjacentElement('afterend', panel);
-
-  function showStatus(message: string, durationMs?: number) {
-    status.textContent = message;
-    status.dataset.visible = 'true';
-    if (feedbackTimer !== undefined) {
-      window.clearTimeout(feedbackTimer);
-      feedbackTimer = undefined;
-    }
-    if (durationMs && durationMs > 0) {
-      feedbackTimer = window.setTimeout(() => {
-        status.dataset.visible = 'false';
-        feedbackTimer = undefined;
-      }, durationMs);
-    }
+  node.classList.add('autofill-input');
+  if (node instanceof HTMLTextAreaElement) {
+    node.classList.add('autofill-input--textarea');
   }
+  wrapper.appendChild(node);
+  wrapper.appendChild(trigger);
+  wrapper.appendChild(status);
 
-  function setLoading(state: boolean) {
-    loading = state;
-    panel.dataset.loading = state ? 'true' : 'false';
-    if (state) {
-      node.setAttribute('aria-busy', 'true');
-      node.dataset.autofillLoading = 'true';
-      trigger.replaceChildren();
-      const spinner = document.createElement('span');
-      spinner.className = 'loading loading-xs';
-      spinner.setAttribute('aria-hidden', 'true');
-      trigger.appendChild(spinner);
-      trigger.appendChild(document.createTextNode(' Generating…'));
-      showStatus('Generating suggestion…');
-    } else {
-      node.removeAttribute('aria-busy');
-      delete node.dataset.autofillLoading;
-      trigger.replaceChildren(document.createTextNode(BUTTON_IDLE_TEXT));
-    }
-    trigger.toggleAttribute('disabled', state);
-    promptInput.toggleAttribute('disabled', state);
+  if (originalParent) {
+    originalParent.insertBefore(wrapper, originalNextSibling ?? null);
   }
 
   function resolveSeed(): Record<string, unknown> | undefined {
     const seedVal = typeof options.seed === 'function' ? options.seed() : options.seed;
     if (!seedVal || typeof seedVal !== 'object') return seedVal ?? undefined;
     return seedVal as Record<string, unknown>;
+  }
+
+  function setStatusMessage(message: string) {
+    status.textContent = message;
+  }
+
+  function setButtonState(state: 'idle' | 'loading' | 'success' | 'error') {
+    trigger.dataset.state = state;
+    const icon =
+      state === 'loading' ? '⏳' : state === 'success' ? '✅' : state === 'error' ? '⚠️' : baseIcon();
+    trigger.textContent = icon;
+  }
+
+  function setLoading(state: boolean) {
+    loading = state;
+    trigger.toggleAttribute('disabled', state);
+    if (state) {
+      node.setAttribute('aria-busy', 'true');
+      node.dataset.autofillLoading = 'true';
+      setButtonState('loading');
+      setStatusMessage('Generating suggestion…');
+    } else {
+      node.removeAttribute('aria-busy');
+      delete node.dataset.autofillLoading;
+    }
+  }
+
+  function scheduleReset() {
+    if (resetTimer !== undefined) {
+      window.clearTimeout(resetTimer);
+    }
+    resetTimer = window.setTimeout(() => {
+      setButtonState('idle');
+      setStatusMessage('');
+      resetTimer = undefined;
+    }, SUCCESS_RESET_MS);
+  }
+
+  function updateAriaLabel() {
+    const field = resolveField(node, options) ?? 'field';
+    const pretty = field.replace(/[_-]+/g, ' ');
+    const label = options.hint ? `${options.hint}` : `Autofill ${pretty}`;
+    trigger.setAttribute('aria-label', label.trim());
+    trigger.setAttribute('title', label.trim());
   }
 
   async function handleAutofill() {
@@ -165,49 +167,54 @@ export const autofill: Action<AutofillElement, AutofillOptions | undefined> = (n
     try {
       const scope = resolveScope(node, options);
       const seedVal = resolveSeed();
-      const overridePrompt = promptInput.value.trim() || undefined;
-      const value = await runFieldAutofill(scope, field, seedVal, overridePrompt);
+      const value = await runFieldAutofill(scope, field, seedVal, undefined);
       if (options.onValue) {
         options.onValue(value);
       } else {
         applyValue(node, value);
       }
-      showStatus(value === undefined ? 'No suggestion returned.' : 'Suggestion applied.', 3000);
+      setButtonState(value === undefined ? 'error' : 'success');
+      const message = value === undefined ? 'No suggestion returned.' : 'Suggestion applied.';
+      setStatusMessage(message);
+      scheduleReset();
     } catch (err: any) {
       const message = err?.message ?? 'Autofill failed.';
-      showStatus(message, 4000);
       console.error('[autofill action]', message);
+      setButtonState('error');
+      setStatusMessage(message);
+      scheduleReset();
     } finally {
       setLoading(false);
     }
   }
 
-  function handlePromptKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      handleAutofill();
-    }
-  }
-
   trigger.addEventListener('click', handleAutofill);
-  promptInput.addEventListener('keydown', handlePromptKeydown);
+  updateAriaLabel();
 
   return {
     update(newOpts) {
       options = { ...options, ...newOpts };
-      if (options.prompt !== undefined) {
-        promptInput.value = options.prompt;
-      }
-      hint.textContent = options.hint ?? DEFAULT_HINT;
+      updateAriaLabel();
+      setButtonState('idle');
     },
     destroy() {
       trigger.removeEventListener('click', handleAutofill);
-      promptInput.removeEventListener('keydown', handlePromptKeydown);
-      if (feedbackTimer !== undefined) {
-        window.clearTimeout(feedbackTimer);
+      if (resetTimer !== undefined) {
+        window.clearTimeout(resetTimer);
       }
-      panel.remove();
-      node.classList.remove('autofill-target');
+      if (wrapper.parentNode) {
+        wrapper.removeChild(node);
+        wrapper.remove();
+      }
+      if (originalParent) {
+        if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+          originalParent.insertBefore(node, originalNextSibling);
+        } else {
+          originalParent.appendChild(node);
+        }
+      }
+      node.classList.remove('autofill-input');
+      node.classList.remove('autofill-input--textarea');
       delete node.dataset.autofillLoading;
       node.removeAttribute('aria-busy');
     }

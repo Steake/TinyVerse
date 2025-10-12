@@ -328,10 +328,15 @@ export class ApiClient {
 
   async controlSimulation(
     action: 'start' | 'pause' | 'stop' | 'step',
-    steps?: number
+    steps?: number,
+    options?: { beatContext?: string }
   ): Promise<ApiResponse<SimulationControlResponseDTO>> {
     return this.request<SimulationControlResponseDTO>('POST', '/simulation/control', {
-      body: { action, steps }
+      body: { 
+        action, 
+        steps,
+        beat_context: options?.beatContext 
+      }
     });
   }
 

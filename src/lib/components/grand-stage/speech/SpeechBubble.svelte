@@ -7,6 +7,7 @@
   export let y: number = 0;
   export let duration: number = 3;
   export let maxWidth: number = 200;
+  export let stackIndex: number = 0; // vertical stacking index per agent
 
   let element: SVGGElement;
   let timeline: gsap.core.Timeline;
@@ -32,15 +33,38 @@
     if (timeline) timeline.kill();
   });
 
-  // Calculate bubble dimensions based on text length
-  $: lines = (text ?? '').toString().split('\n');
-  $: bubbleWidth = Math.max(60, Math.min(maxWidth, Math.max(...lines.map(line => line.length * 8))));
-  $: bubbleHeight = Math.max(28, lines.length * 20 + 20);
+  // Simple word-wrapping based on approximate character width (~8px per char)
+  function wrapWords(t: string, maxChars: number): string[] {
+    const words = (t || '').split(/\s+/);
+    const lines: string[] = [];
+    let current = '';
+    for (const w of words) {
+      if (current.length === 0) {
+        current = w;
+      } else if ((current.length + 1 + w.length) <= maxChars) {
+        current += ' ' + w;
+      } else {
+        lines.push(current);
+        current = w;
+      }
+    }
+    if (current.length) lines.push(current);
+    return lines.length ? lines : ['']
+  }
+
+  $: approxCharWidth = 8;
+  $: maxCharsPerLine = Math.max(8, Math.floor(maxWidth / approxCharWidth) - 1);
+  $: lines = wrapWords((text ?? '').toString(), maxCharsPerLine);
+  $: bubbleWidth = Math.max(60, Math.min(maxWidth, Math.max(...lines.map(line => line.length * approxCharWidth))));
+  $: bubbleHeight = Math.max(28, lines.length * 18 + 24);
+
+  // Vertical position with stacking offset (older bubbles appear higher)
+  $: stackedY = y - 60 - stackIndex * (bubbleHeight + 8);
 </script>
 
 <g
   bind:this={element}
-  transform={`translate(${x},${y})`}
+  transform={`translate(${x},${stackedY})`}
   class="speech-bubble"
 >
   <!-- Bubble background -->

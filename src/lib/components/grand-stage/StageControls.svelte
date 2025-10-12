@@ -66,7 +66,7 @@
       }
     } catch (error) {
       console.error('Failed to toggle simulation', error);
-      toastStore.error('Unable to control simulation');
+      // Toast already shown by simulation store, don't duplicate
     }
   }
 
@@ -128,8 +128,8 @@
 
   <div class="playback-controls">
     <div class="btn-group">
-      <button class="btn btn-sm btn-ghost" on:click={handleResetView} title="Reset view" aria-label="Reset view">↺</button>
-      <button class="btn btn-sm btn-ghost" on:click={handleFitToBounds} title="Fit to bounds" aria-label="Fit to bounds">⤢</button>
+      <button class="btn btn-sm btn-outline" on:click={handleResetView} title="Reset view" aria-label="Reset view">↺</button>
+      <button class="btn btn-sm btn-outline" on:click={handleFitToBounds} title="Fit to bounds" aria-label="Fit to bounds">⤢</button>
     </div>
     <button
       class={`btn btn-sm ${$simulation.isRunning ? 'btn-secondary' : 'btn-primary'}`}

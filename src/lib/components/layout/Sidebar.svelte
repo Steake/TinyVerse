@@ -95,6 +95,16 @@
 </nav>
 
 <style>
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    width: 100%;
+  }
+
   .nav-item {
     display: flex;
     align-items: center;
@@ -109,11 +119,36 @@
     font-size: var(--text-base);
     cursor: pointer;
     min-height: 2.5rem;
+    text-align: left;
+  }
+
+  .nav-icon {
+    flex-shrink: 0;
+    width: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* when collapsed, center icon and hide inline labels */
-  :global(nav[role="navigation"][data-collapsed="true"]) .nav-item { justify-content: center; }
-  :global(nav[role="navigation"][data-collapsed="true"]) .nav-item .nav-icon { display: inline-flex; }
+  :global(nav[role="navigation"][data-collapsed="true"]) .nav-item { 
+    justify-content: center; 
+    padding: var(--space-sm);
+  }
+  
+  :global(nav[role="navigation"][data-collapsed="true"]) .nav-icon { 
+    display: inline-flex; 
+    width: auto;
+  }
+  
   :global(nav[role="navigation"][data-collapsed="true"]) .nav-label { 
     position: absolute; 
     left: calc(100% + 8px); 
@@ -129,10 +164,24 @@
     pointer-events: none;
     opacity: 0; 
     transition: opacity var(--duration-fast) cubic-bezier(0.22, 0.61, 0.36, 1);
+    visibility: hidden;
+    flex: none;
   }
-  :global(nav[role="navigation"][data-collapsed="true"]) .nav-item:hover .nav-label { opacity: 1; }
-  :global(nav[role="navigation"][data-collapsed="true"]) .nav-item .nav-label { visibility: hidden; }
-  :global(nav[role="navigation"][data-collapsed="false"]) .nav-item .nav-label { visibility: visible; position: static; transform: none; background: transparent; color: inherit; border: 0; padding: 0; opacity: 1; }
+  
+  :global(nav[role="navigation"][data-collapsed="true"]) .nav-item:hover .nav-label { 
+    opacity: 1; 
+  }
+  
+  :global(nav[role="navigation"][data-collapsed="false"]) .nav-label { 
+    position: static; 
+    transform: none; 
+    background: transparent; 
+    color: inherit; 
+    border: 0; 
+    padding: 0; 
+    opacity: 1;
+    visibility: visible;
+  }
 
   .nav-item:hover:not(.active) { background: linear-gradient(90deg, var(--color-bg-tertiary), transparent); transform: translateX(2px); }
 

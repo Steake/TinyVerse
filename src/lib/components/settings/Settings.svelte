@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { API_ENDPOINTS } from '../../api/endpoints';
+  import { API_BASE_URL } from '../../api';
   import BaseModal from '../common/BaseModal.svelte';
   import { toastStore } from '../../stores/toast';
   
@@ -72,9 +73,16 @@
     error = '';
     
     try {
-  const response = await fetch(`${API_ENDPOINTS.CONFIG}`);
+      // Remove /api prefix since API_BASE_URL already includes it
+      const url = `${API_BASE_URL.replace(/\/api$/, '')}${API_ENDPOINTS.CONFIG}`;
+      const response = await fetch(url);
       
       if (!response.ok) {
+        const text = await response.text();
+        // Check if response is HTML (error page) instead of JSON
+        if (text.trim().startsWith('<!')) {
+          throw new Error(`Backend returned error page (${response.status}). Is the backend running?`);
+        }
         throw new Error(`Failed to load configuration: ${response.statusText}`);
       }
       
@@ -96,9 +104,18 @@
 
   async function loadSimState() {
     try {
-  const res = await fetch(`${API_ENDPOINTS.SIMULATION_STATE}`);
+      // SIMULATION_STATE doesn't have /api prefix, so use full backend URL without /api
+      const baseUrl = API_BASE_URL.replace(/\/api$/, '');
+      const url = `${baseUrl}${API_ENDPOINTS.SIMULATION_STATE}`;
+      const res = await fetch(url);
       if (res.ok) {
-        simState = await res.json();
+        const text = await res.text();
+        // Check if response is HTML instead of JSON
+        if (text.trim().startsWith('<!')) {
+          console.warn('Backend returned HTML instead of JSON. Backend may not be running.');
+          return;
+        }
+        simState = JSON.parse(text);
       }
     } catch (e) {
       console.warn('Failed to fetch simulation state', e);
@@ -132,7 +149,8 @@
         updates.tinytroupe_temperature = formData.tinytroupe_temperature;
       }
       
-  const response = await fetch(`${API_ENDPOINTS.CONFIG}`, {
+      const url = `${API_BASE_URL.replace(/\/api$/, '')}${API_ENDPOINTS.CONFIG}`;
+      const response = await fetch(url, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -176,7 +194,8 @@
     resetBusy = true;
   error = '';
     try {
-      const res = await fetch(`${API_ENDPOINTS.ADMIN_RESET}`, {
+      const url = `${API_BASE_URL}${API_ENDPOINTS.ADMIN_RESET.replace('/api', '')}`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ confirm: true })
@@ -197,7 +216,7 @@
   }
 </script>
 
-<div class="container mx-auto p-6 max-w-4xl">
+<div class="settings-container">
   <div class="mb-6">
     <h1 class="text-3xl font-bold mb-2">⚙️ Settings</h1>
     <p class="text-secondary">Configure OpenAI API settings and TinyTroupe parameters</p>
@@ -209,7 +228,7 @@
       <div class="card-body">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-lg font-semibold">Backend State</h2>
-          <button class="btn btn-xs btn-ghost" type="button" on:click={loadSimState}>Refresh</button>
+          <button class="btn btn-xs btn-outline" type="button" on:click={loadSimState}>Refresh</button>
         </div>
         {#if simState}
           <ul class="text-sm space-y-1">
@@ -396,7 +415,7 @@
           <div style="display:flex; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-lg);">
             <button
               type="button"
-              class="btn btn-ghost"
+              class="btn btn-outline"
               on:click={handleReset}
               disabled={saving}
             >
@@ -423,7 +442,7 @@
     <BaseModal bind:show={showResetModal} title="Confirm Reset">
       <p>You're about to clear all agents, locations, connections, and logs. This cannot be undone.</p>
       <div class="modal-action">
-        <button class="btn btn-ghost" type="button" on:click={() => (showResetModal = false)} disabled={resetBusy}>Cancel</button>
+        <button class="btn btn-outline" type="button" on:click={() => (showResetModal = false)} disabled={resetBusy}>Cancel</button>
         <button class="btn btn-error" type="button" on:click={confirmReset} disabled={resetBusy}>
           {#if resetBusy}Resetting...{:else}Confirm Reset{/if}
         </button>
@@ -432,7 +451,12 @@
 </div>
 
 <style>
-  .container {
+  .settings-container {
+    height: 100%;
+    overflow-y: auto;
+    padding: var(--space-lg);
+    max-width: 1024px;
+    margin: 0 auto;
     animation: fadeIn 0.3s ease-in;
   }
   

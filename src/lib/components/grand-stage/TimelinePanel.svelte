@@ -96,7 +96,7 @@
                 </button>
               {/if}
               {#if beat.status !== 'complete'}
-                <button class="btn btn-xs btn-ghost" type="button" on:click={() => completeBeat(beat.id)}>
+                <button class="btn btn-xs btn-outline" type="button" on:click={() => completeBeat(beat.id)}>
                   Mark complete
                 </button>
               {/if}

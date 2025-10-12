@@ -4,7 +4,7 @@
   import PromptReviewPopover from '../prompts/PromptReviewPopover.svelte';
   import { derived } from 'svelte/store';
 
-  export let placeholder: string = 'Describe what you want populated (e.g., “Create a realistic call center agent roster”).';
+  export let placeholder: string = 'Describe what you want populated (e.g., "Create a realistic office team").';
   export let onApply: (() => void) | undefined;
 
   const prompt = derived(promptStore, ($s) => $s.master.prompt);

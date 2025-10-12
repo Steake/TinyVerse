@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { api } from '../../api';
   import { agentStore } from '../../stores/agents';
-  import { get } from 'svelte/store';
+  import type { Agent } from '../../stores/types';
+  import { logsToCSV, logsToJSON } from '../../utils/transcript';
   // (Optional) WebSocket service could be used to trigger refreshes
 
   type LogEntry = {
@@ -28,6 +29,8 @@
   let limit = 200;
   let autoScroll = true;
   let container: HTMLDivElement | null = null;
+  let exporting = false;
+  // Use $agentStore directly in the template; avoid local shadowing
 
   const dialogueish = ['TALK','SAY','SPEAK','DIALOG','DIALOGUE','UTTER','MESSAGE','CHAT','UTTERANCE'];
 
@@ -94,7 +97,7 @@
 
   $: applyFilters();
 
-  $: agents = get(agentStore) || [];
+  // Keep a live view of agents via store auto-subscription (Svelte magic $agentStore)
 
   function formatTime(ts: string | Date): string {
     try {
@@ -104,20 +107,59 @@
       return '';
     }
   }
+
+  function download(filename: string, content: string, type = 'text/plain') {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function resolveAgentName(agentId?: string, agentName?: string): string {
+    if (agentName && agentName.length) return agentName;
+    const list = ($agentStore as Agent[]) || [];
+    const match = list.find((a: Agent) => a.id === agentId);
+    return match?.name || 'Unknown';
+  }
+
+  async function exportJSON() {
+    try {
+      exporting = true;
+      const payload = logsToJSON(filtered as any);
+      download('transcript.json', payload, 'application/json');
+    } finally {
+      exporting = false;
+    }
+  }
+
+  async function exportCSV() {
+    try {
+      exporting = true;
+      const csv = logsToCSV(filtered as any, (ts) => formatTime(ts));
+      download('transcript.csv', csv, 'text/csv');
+    } finally {
+      exporting = false;
+    }
+  }
 </script>
 
 <section class="transcript-panel" aria-label="Transcript">
   <header class="header">
     <div class="left">
-      <button class="btn btn-xs" on:click={() => (open = !open)} aria-expanded={open} aria-controls="transcript-body">
+      <button class="btn btn-sm btn-outline" on:click={() => (open = !open)} aria-expanded={open} aria-controls="transcript-body">
         {open ? 'Hide' : 'Show'} Transcript
       </button>
       <span class="meta">{filtered.length} entries</span>
     </div>
     <div class="filters">
+      <button class="btn btn-outline btn-xs" aria-busy={exporting} title="Export JSON" on:click={exportJSON}>📦 JSON</button>
+      <button class="btn btn-outline btn-xs" aria-busy={exporting} title="Export CSV" on:click={exportCSV}>📄 CSV</button>
       <select class="select select-xs" bind:value={agentFilter} on:change={applyFilters}>
         <option value="all">All agents</option>
-        {#each agents as a}
+        {#each $agentStore as a (a.id)}
           <option value={a.id}>{a.name}</option>
         {/each}
       </select>
@@ -134,10 +176,10 @@
       {#if filtered.length === 0}
         <div class="empty">No entries yet.</div>
       {:else}
-        {#each filtered as item (item.timestamp + '-' + (item.agentId || item.agentName || ''))}
+        {#each filtered as item, index (item.id || `${item.timestamp}-${item.agentId || item.agentName || ''}-${index}`)}
           <div class="row">
             <div class="ts">{formatTime(item.timestamp)}</div>
-            <div class="agent">{item.agentName || (agents.find(a => a.id === item.agentId)?.name) || 'Unknown'}</div>
+            <div class="agent">{resolveAgentName(item.agentId, item.agentName)}</div>
             <div class="text">{item.content}</div>
           </div>
         {/each}

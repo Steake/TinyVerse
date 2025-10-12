@@ -10,7 +10,9 @@
   import AgentNode from './agents/AgentNode.svelte';
   import SpeechBubble from './speech/SpeechBubble.svelte';
   import AgentTooltip from './agents/AgentTooltip.svelte';
+  // @ts-ignore: Svelte type resolution shim
   import TranscriptDrawer from './TranscriptDrawer.svelte';
+  import TimelinePanel from './TimelinePanel.svelte';
   import type { Interaction } from '../../utils/mock-data/grand-stage';
   import type { Agent } from '../../stores/types';
 
@@ -21,6 +23,8 @@
   let locations: import('../../stores/types').Location[] = [];
   let connections: import('../../stores/types').Connection[] = [];
   const SCALE = 5;
+  
+  let bottomPanelTab: 'transcript' | 'timeline' = 'transcript';
 
   // Simple zoom/pan state
   let zoom = 1;
@@ -89,7 +93,7 @@
     currentInteractions = Array.isArray(state?.currentInteractions) ? state.currentInteractions : [];
   });
 
-  worldStore.subscribe(state => {
+  worldStore.subscribe((state: any) => {
     locations = state?.locations ?? [];
     connections = state?.connections ?? [];
   });
@@ -97,11 +101,11 @@
   // Seed stage layout from agents if empty
   onMount(async () => {
     try {
-      let agents = get(agentStore) ?? [];
+      let agents = (get(agentStore) as Agent[]) ?? [];
       if (!Array.isArray(agents) || agents.length === 0) {
         // Load agents from backend if not already loaded
         await agentStore.fetchAgents?.();
-        agents = get(agentStore) ?? [];
+        agents = (get(agentStore) as Agent[]) ?? [];
       }
       // Always load locations and connections for the stage background map
       await worldStore.fetchLocations?.();
@@ -135,8 +139,8 @@
     try {
       await agentStore.fetchAgents?.();
       const agents = get(agentStore) ?? [];
-      if ((agents?.length ?? 0) > 0) {
-        stageStore.seedFromAgents(agents);
+      if (((agents as Agent[])?.length ?? 0) > 0) {
+        stageStore.seedFromAgents(agents as any);
       }
     } catch (e) {
       console.error('GrandStage: seedFromBackend failed', e);
@@ -173,6 +177,21 @@
     agentStore.seed?.(demo as any);
     stageStore.seedFromAgents(demo.map(a => ({ id: a.id })) as any);
   }
+
+  // Helpers to avoid typing issues inside template expressions
+  function findAgentById(id: string | undefined, list: Agent[] = []): Agent | undefined {
+    if (!id) return undefined;
+    return list.find((a) => a.id === id);
+  }
+  function findAgentByIdInStore(id: string | undefined): Agent | undefined {
+    const list = (($agentStore as unknown as Agent[]) || []);
+    return id ? list.find((a) => a.id === id) : undefined;
+  }
+
+  function stackIndexFor(interactionId: string, agentId: string): number {
+    const sameAgent = currentInteractions.filter(i => (i.participants?.[0] ?? '') === agentId);
+    return sameAgent.findIndex(i => i.id === interactionId);
+  }
 </script>
 
 <section class="flex-col flex-1 brand-gradient">
@@ -200,7 +219,7 @@
         </div>
       {/if}
   <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-  <svg class="w-full h-full" role="application" aria-label="Grand Stage canvas" on:wheel|passive={onWheel} on:mousedown={onMouseDown} on:mousemove={onMouseMove} on:mouseup={onMouseUp} on:mouseleave={onMouseLeave}>
+  <svg class="w-full h-full" role="application" aria-label="Grand Stage canvas" on:wheel={onWheel} on:mousedown={onMouseDown} on:mousemove={onMouseMove} on:mouseup={onMouseUp} on:mouseleave={onMouseLeave}>
         <defs>
           <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
             <path d="M0,0 L0,6 L9,3 z" fill="currentColor" />
@@ -250,7 +269,7 @@
         </g>
       <!-- Agents -->
       {#each activeAgents as agentId}
-        {@const agent = ($agentStore || []).find?.((a) => a.id === agentId)}
+        {@const agent = findAgentByIdInStore(agentId)}
         {@const position = agentPositions?.[agentId]}
         {#if agent && position}
           <AgentNode
@@ -265,14 +284,17 @@
 
       <!-- Interactions -->
       {#each currentInteractions as interaction (interaction.id)}
-        {@const agent = ($agentStore || []).find?.((a) => a.id === interaction.participants?.[0])}
-        {@const position = agentPositions?.[interaction.participants?.[0] ?? '']}
+        {@const agentId = interaction.participants?.[0] ?? ''}
+        {@const agent = findAgentByIdInStore(agentId)}
+        {@const position = agentPositions?.[agentId]}
+        {@const stackIndex = stackIndexFor(interaction.id, agentId)}
         {#if agent && position}
           <SpeechBubble
             text={interaction.content}
             x={position.x}
-            y={position.y - 60}
+            y={position.y}
             duration={interaction.duration / 1000}
+            stackIndex={stackIndex}
             on:complete={() => handleInteractionComplete(interaction.id)}
           />
         {/if}
@@ -286,7 +308,32 @@
       {/if}
     </div>
   </div>
-  <div class="px-3 py-2">
-    <TranscriptDrawer />
+  
+  <!-- Bottom Panel with Tabs -->
+  <div class="border-t border-[var(--color-border-subtle)]">
+    <div class="flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-secondary)]">
+      <button
+        class="btn btn-sm {bottomPanelTab === 'transcript' ? 'btn-primary' : 'btn-ghost'}"
+        type="button"
+        on:click={() => bottomPanelTab = 'transcript'}
+      >
+        📝 Transcript
+      </button>
+      <button
+        class="btn btn-sm {bottomPanelTab === 'timeline' ? 'btn-primary' : 'btn-ghost'}"
+        type="button"
+        on:click={() => bottomPanelTab = 'timeline'}
+      >
+        🎬 Story Beats
+      </button>
+    </div>
+    
+    <div class="px-3 py-2">
+      {#if bottomPanelTab === 'transcript'}
+        <TranscriptDrawer />
+      {:else if bottomPanelTab === 'timeline'}
+        <TimelinePanel />
+      {/if}
+    </div>
   </div>
 </section>

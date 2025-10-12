@@ -48,12 +48,16 @@ async def control_simulation(control: SimulationControl):
                 )
 
             steps = _resolve_steps(control.steps)
-            await run_in_threadpool(adapter.run_simulation, steps)
+            await run_in_threadpool(adapter.run_simulation, steps, control.beat_context)
 
             await broadcast_simulation_event(
                 "simulation_started",
-                {"action": "start", "steps": steps},
+                {"action": "start", "steps": steps, "beat_context": control.beat_context},
             )
+            # Emit dialogue events produced during these steps
+            new_dialogue = adapter.consume_new_logs(only_dialogue=True)
+            if new_dialogue:
+                await broadcast_simulation_event("dialogue", {"entries": new_dialogue})
 
             suffix = "step" if steps == 1 else "steps"
             return _build_response(f"Simulation executed for {steps} {suffix}")
@@ -81,12 +85,16 @@ async def control_simulation(control: SimulationControl):
 
         if control.action == "step":
             steps = _resolve_steps(control.steps)
-            await run_in_threadpool(adapter.run_simulation, steps)
+            await run_in_threadpool(adapter.run_simulation, steps, control.beat_context)
 
             await broadcast_simulation_event(
                 "simulation_step",
-                {"action": "step", "current_step": adapter.current_step, "steps": steps},
+                {"action": "step", "current_step": adapter.current_step, "steps": steps, "beat_context": control.beat_context},
             )
+            # Emit dialogue events produced during these steps
+            new_dialogue = adapter.consume_new_logs(only_dialogue=True)
+            if new_dialogue:
+                await broadcast_simulation_event("dialogue", {"entries": new_dialogue})
 
             suffix = "step" if steps == 1 else "steps"
             return _build_response(f"Simulation advanced {steps} {suffix}")

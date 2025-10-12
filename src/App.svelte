@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import Sidebar from './lib/components/layout/Sidebar.svelte';
   import Topbar from './lib/components/layout/Topbar.svelte';
-  import WorldBuilder from './lib/components/playwright/WorldBuilder.svelte';
+  import LocationManager from './lib/components/playwright/LocationManager.svelte';
   import CastingCall from './lib/components/playwright/CastingCall.svelte';
   import RelationshipNetwork from './lib/components/playwright/RelationshipNetwork.svelte';
   import MindPalace from './lib/components/playwright/MindPalace.svelte';
@@ -19,7 +19,7 @@
   import { openWizard, maybeLaunchWizard } from './lib/stores/setupWizard';
 
   let activeSection = 'playwright-desk';
-  let activeTab = 'world-builder';
+  let activeTab = 'location-manager';
   let apiInitialized = false;
   let error = '';
 
@@ -85,9 +85,9 @@
         <div class="flex items-center justify-between gap-2 px-4 py-2">
           <div class="flex flex-wrap gap-2">
           <button
-            class="btn-secondary {activeTab === 'world-builder' ? 'btn-primary' : ''} btn-sm"
-            on:click={() => handleTabChange('world-builder')}
-          >World Builder</button>
+            class="btn-secondary {activeTab === 'location-manager' ? 'btn-primary' : ''} btn-sm"
+            on:click={() => handleTabChange('location-manager')}
+          >Locations</button>
           <button
             class="btn-secondary {activeTab === 'casting-call' ? 'btn-primary' : ''} btn-sm"
             on:click={() => handleTabChange('casting-call')}
@@ -109,8 +109,8 @@
       </div>
 
   <div class="flex-1 overflow-auto bg-[var(--color-bg-primary)]">
-    {#if activeTab === 'world-builder'}
-      <WorldBuilder />
+    {#if activeTab === 'location-manager'}
+      <LocationManager on:tab-change={(e) => handleTabChange(e.detail)} />
     {:else if activeTab === 'casting-call'}
       <CastingCall />
     {:else if activeTab === 'relationship-network'}

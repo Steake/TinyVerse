@@ -360,7 +360,7 @@
       >
         {isAutofilling ? 'Generating…' : 'Autofill with LLM'}
       </button>
-      <button type="button" class="btn btn-ghost btn-sm" on:click={() => dispatch('cancel')}>
+      <button type="button" class="btn btn-outline btn-sm" on:click={() => dispatch('cancel')}>
         ← Back
       </button>
     </div>
@@ -398,7 +398,7 @@
     />
     <div class="label" role="note">
       <span class="label-text-alt">Defaults update as you edit occupation details.</span>
-      <button type="button" class="btn btn-ghost btn-xs" on:click={resetAgentPrompt}>Reset</button>
+      <button type="button" class="btn btn-outline btn-xs" on:click={resetAgentPrompt}>Reset</button>
     </div>
   </div>
 
@@ -578,7 +578,7 @@
       {#each agent.personality_traits || [] as trait}
         <span class="badge badge-primary gap-2">
           {trait}
-          <button type="button" class="btn btn-ghost btn-xs" on:click={() => removeTrait(trait)}>×</button>
+          <button type="button" class="btn btn-error btn-xs" on:click={() => removeTrait(trait)}>×</button>
         </span>
       {/each}
     </div>
@@ -609,7 +609,7 @@
       {#each agent.professional_interests || [] as interest}
         <span class="badge badge-secondary gap-2">
           {interest}
-          <button type="button" class="btn btn-ghost btn-xs" on:click={() => removeInterest(interest, 'professional')}>×</button>
+          <button type="button" class="btn btn-error btn-xs" on:click={() => removeInterest(interest, 'professional')}>×</button>
         </span>
       {/each}
     </div>
@@ -640,7 +640,7 @@
       {#each agent.personal_interests || [] as interest}
         <span class="badge badge-accent gap-2">
           {interest}
-          <button type="button" class="btn btn-ghost btn-xs" on:click={() => removeInterest(interest, 'personal')}>×</button>
+          <button type="button" class="btn btn-error btn-xs" on:click={() => removeInterest(interest, 'personal')}>×</button>
         </span>
       {/each}
     </div>
@@ -689,7 +689,7 @@
       {#each agent.skills || [] as skill}
         <span class="badge badge-info gap-2">
           {skill.name} (Level {skill.level})
-          <button type="button" class="btn btn-ghost btn-xs" on:click={() => removeSkill(skill.name)}>×</button>
+          <button type="button" class="btn btn-error btn-xs" on:click={() => removeSkill(skill.name)}>×</button>
         </span>
       {/each}
     </div>
@@ -697,8 +697,10 @@
 
   <!-- Backstory -->
   <div class="form-control">
-    <label class="label" for="backstoryEditor">Backstory</label>
-    <AutofillButton scope="agent" field="backstory" {seed} onValue={(v) => agent.backstory = String(v)} title="Autofill backstory" />
+    <div class="label justify-between items-center gap-3">
+      <label class="label-text" for="backstoryEditor">Backstory</label>
+      <AutofillButton scope="agent" field="backstory" {seed} onValue={(v) => agent.backstory = String(v)} title="Autofill backstory" />
+    </div>
     <div id="backstoryEditor" aria-label="Backstory">
       <RichTextEditor bind:content={agent.backstory} />
     </div>

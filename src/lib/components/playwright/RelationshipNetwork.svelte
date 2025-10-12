@@ -6,6 +6,7 @@
   import RelationshipEditModal from './relationship-network/RelationshipEditModal.svelte';
   import NodeTooltip from './relationship-network/NodeTooltip.svelte';
   import UniversalToolbar from '../common/UniversalToolbar.svelte';
+  import { toastStore } from '../../stores/toast';
 
   type RelationshipNode = d3.SimulationNodeDatum & {
     id: string;
@@ -49,6 +50,7 @@
   let width = 800;
   let height = 600;
   let hoveredNode: Agent | null = null;
+  let isGeneratingRelationships = false;
 
   $: {
     agents = $agentStore;
@@ -362,6 +364,94 @@
     sortBy = event.detail === 'group' ? 'group' : 'none';
     updateForces();
   }
+
+  async function handleAutoGenerateRelationships() {
+    if (agents.length < 2) {
+      toastStore.error('Need at least 2 agents to generate relationships');
+      return;
+    }
+
+    isGeneratingRelationships = true;
+
+    try {
+      const relationships = generatePlausibleRelationships(agents);
+
+      if (relationships.length === 0) {
+        toastStore.warning('No relationships generated');
+        return;
+      }
+
+      // Apply relationships
+      let successCount = 0;
+      for (const { sourceId, relationship } of relationships) {
+        try {
+          await agentStore.addRelationship(sourceId, relationship);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to add relationship for agent ${sourceId}:`, error);
+        }
+      }
+
+      toastStore.success(`Generated ${successCount} relationship${successCount !== 1 ? 's' : ''}`);
+    } catch (error) {
+      console.error('Failed to auto-generate relationships:', error);
+      toastStore.error('Failed to generate relationships');
+    } finally {
+      isGeneratingRelationships = false;
+    }
+  }
+
+  function generatePlausibleRelationships(agentList: Agent[]): Array<{ sourceId: string; relationship: Relationship }> {
+    const results: Array<{ sourceId: string; relationship: Relationship }> = [];
+    const types: Relationship['type'][] = ['friend', 'colleague', 'family', 'rival'];
+    
+    // For each agent, create 1-3 relationships
+    for (let i = 0; i < agentList.length; i++) {
+      const source = agentList[i];
+      const numRelationships = Math.floor(Math.random() * 3) + 1; // 1-3 relationships
+      
+      // Track already connected agents to avoid duplicates
+      const existingTargets = new Set((source.relationships || []).map(r => r.targetId));
+      const potentialTargets = agentList
+        .filter((_, idx) => idx !== i && !existingTargets.has(agentList[idx].id))
+        .sort(() => Math.random() - 0.5);
+      
+      for (let j = 0; j < Math.min(numRelationships, potentialTargets.length); j++) {
+        const target = potentialTargets[j];
+        const type = types[Math.floor(Math.random() * types.length)];
+        const strength = Math.floor(Math.random() * 6) + 4; // 4-9 strength
+        
+        let description = '';
+        switch (type) {
+          case 'friend':
+            description = 'Close friends who share common interests';
+            break;
+          case 'colleague':
+            description = 'Professional colleagues who work together';
+            break;
+          case 'family':
+            description = 'Family members with a close bond';
+            break;
+          case 'rival':
+            description = 'Competitive relationship with mutual respect';
+            break;
+        }
+        
+        results.push({
+          sourceId: source.id,
+          relationship: {
+            targetId: target.id,
+            type,
+            strength,
+            description
+          }
+        });
+      }
+    }
+    
+    return results;
+  }
+
 </script>
 
 <div class="h-full flex flex-col">
@@ -371,7 +461,22 @@
     on:groupSelect={handleGroupSelect}
     on:sortChange={handleSortChange}
   >
+      >
     <div class="flex gap-2 items-center">
+      <button
+        class="btn btn-sm btn-primary gap-1"
+        on:click={handleAutoGenerateRelationships}
+        disabled={isGeneratingRelationships || agents.length < 2}
+        title="Auto-generate plausible relationships between agents"
+      >
+        {#if isGeneratingRelationships}
+          <span class="loading loading-spinner loading-xs"></span>
+          Generating...
+        {:else}
+          ✨ Auto-generate
+        {/if}
+      </button>
+
       <select
         class="select select-bordered select-sm"
         bind:value={filterType}
@@ -384,6 +489,7 @@
         <option value="rival">Rivals</option>
       </select>
     </div>
+  >
   </UniversalToolbar>
 
   {#if selectedSourceAgent}

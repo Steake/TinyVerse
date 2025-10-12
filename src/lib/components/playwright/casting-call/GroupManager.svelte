@@ -102,13 +102,13 @@
           {group.name}
         </button>
         <button
-          class="btn btn-ghost btn-sm btn-square"
+          class="btn btn-outline btn-sm btn-square"
           on:click={() => startEdit(group)}
         >
           ✏️
         </button>
         <button
-          class="btn btn-ghost btn-sm btn-square text-error"
+          class="btn btn-error btn-sm btn-square"
           on:click={() => handleDelete(group.id)}
         >
           ❌

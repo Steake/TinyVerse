@@ -96,10 +96,8 @@ export class WebSocketService {
         // Refresh simulation state
         worldStore.fetchSimulationState();
         toastStore.info(`Simulation step: ${message.data.step}`);
-        // Pull latest logs and project speech onto stage as bubbles
-        this.fetchAndProjectLogs().catch((e) => {
-          console.error('Failed to project logs to stage:', e);
-        });
+        // Prefer dialogue WS events; keep logs fetch as fallback if no dialogue is emitted
+        // this.fetchAndProjectLogs(); // commented out once backend reliably emits 'dialogue'
         break;
 
       case 'simulation_started':
@@ -116,15 +114,17 @@ export class WebSocketService {
 
       case 'state':
         worldStore.update((current) => ({ ...current, simulationState: message.data ?? null }));
-        // Optionally project logs periodically when state ticks in
-        // Keep light to avoid spamming the API; only if simulation is running
+        break;
+
+      case 'dialogue':
+        // Direct dialogue push from backend: { entries: [...] }
         try {
-          const running = Boolean(message?.data?.is_running);
-          if (running) {
-            this.fetchAndProjectLogs().catch(() => {});
+          const entries = (message?.data?.entries ?? []) as any[];
+          if (Array.isArray(entries) && entries.length > 0) {
+            this.projectEntries(entries);
           }
-        } catch {
-          // ignore
+        } catch (e) {
+          console.error('Failed to handle dialogue event:', e);
         }
         break;
 
@@ -188,61 +188,56 @@ export class WebSocketService {
       // Process oldest-first so bubbles appear in chronological order
       const ordered = [...logs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       for (const log of ordered) {
-        const key = this.buildLogKey(log);
-        if (this.hasSeen(key)) continue;
-
-        const content: string = this.extractContent(log);
-        if (!content || typeof content !== 'string' || content.trim().length === 0) {
-          this.markSeen(key);
-          continue;
-        }
-
-        // Only treat dialogue-like entries as speech bubbles
-        const kind = (log.action || log.action_type || '').toString().toUpperCase();
-        const dialogueish = ['TALK', 'SAY', 'SPEAK', 'DIALOGUE', 'DIALOG', 'MESSAGE', 'CHAT', 'UTTER', 'UTTERANCE'];
-        if (kind && !dialogueish.some(k => kind.includes(k))) {
-          // Mark seen but skip bubble projection for non-dialogue events
-          this.markSeen(key);
-          continue;
-        }
-
-        // Resolve agent id
-        let agentId: string | undefined = log.agentId || log.agent_id;
-        if (!agentId) {
-          const byName = (get(agentStore) || []).find((a: any) => a?.name && a.name === (log.agentName || log.agent_name));
-          agentId = byName?.id;
-        }
-        if (!agentId) {
-          // Cannot place bubble without an agent; mark seen and skip
-          this.markSeen(key);
-          continue;
-        }
-
-        // Ensure agent is known to the stage; place if missing
-        const stage = get(stageStore) as any;
-        const isActive = Array.isArray(stage?.activeAgents) && stage.activeAgents.includes(agentId);
-        if (!isActive) {
-          // Pick a random position within a central band to avoid (0,0)
-          const x = 100 + Math.random() * 600;
-          const y = 120 + Math.random() * 360;
-          stageStore.addAgent(agentId, { x, y });
-        }
-
-        const interaction: Interaction = {
-          id: this.makeInteractionId(agentId, key),
-          type: 'conversation',
-          participants: [agentId],
-          content: content.trim(),
-          startTime: new Date(log.timestamp || Date.now()),
-          duration: this.estimateDurationMs(content),
-          mood: 'neutral'
-        };
-        stageStore.addInteraction(interaction);
-
-        this.markSeen(key);
+        this.projectEntries([log]);
       }
     } finally {
       this.fetchingLogs = false;
+    }
+  }
+
+  private projectEntries(entries: any[]) {
+    const ordered = [...entries].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    for (const log of ordered) {
+      const key = this.buildLogKey(log);
+      if (this.hasSeen(key)) continue;
+
+      const content: string = this.extractContent(log);
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        this.markSeen(key);
+        continue;
+      }
+
+      // Resolve agent id
+      let agentId: string | undefined = (log.agentId || log.agent_id) as string | undefined;
+      if (!agentId) {
+        const byName = (get(agentStore) || []).find((a: any) => a?.name && a.name === (log.agentName || log.agent_name));
+        agentId = byName?.id;
+      }
+      if (!agentId) {
+        this.markSeen(key);
+        continue;
+      }
+
+      const stage = get(stageStore) as any;
+      const isActive = Array.isArray(stage?.activeAgents) && stage.activeAgents.includes(agentId);
+      if (!isActive) {
+        const x = 100 + Math.random() * 600;
+        const y = 120 + Math.random() * 360;
+        stageStore.addAgent(agentId, { x, y });
+      }
+
+      const interaction: Interaction = {
+        id: this.makeInteractionId(agentId, key),
+        type: 'conversation',
+        participants: [agentId],
+        content: content.trim(),
+        startTime: new Date(log.timestamp || Date.now()),
+        duration: this.estimateDurationMs(content),
+        mood: 'neutral'
+      };
+      stageStore.addInteraction(interaction);
+
+      this.markSeen(key);
     }
   }
 

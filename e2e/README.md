@@ -5,41 +5,9 @@
 - **Node.js 18.19+** (required for Playwright ESM support)
 - Backend and frontend services (auto-started by Playwright)
 
-## Call Center Simulation Test
+## Test Organization
 
-### Overview
-
-`call-center.spec.ts` - Comprehensive simulation test that creates a realistic call center environment with multiple agent types and customer interactions.
-
-### What It Tests
-
-**Agent Types:**
-- **TQ Floor** (Telequestioners) - Cold callers making initial contact
-- **Closers Room** - Deal-closing specialists handling warm leads
-- **Compliance Office** - QA monitoring and regulatory oversight
-- **Customer Zone** - Simulated customer leads (qualified, hard, soft)
-
-**Workflow:**
-1. **Setup Phase** - Creates locations, agents, and relationships via API
-2. **Simulation Phase** - Runs 20 steps of agent interactions
-3. **Analysis Phase** - Generates performance metrics and compliance reports
-4. **Cleanup Phase** - Stops simulation and verifies artifact generation
-
-### Artifacts Generated
-
-All artifacts are saved to `test-artifacts/call-center/`:
-
-- `locations.json` - Created locations with IDs
-- `agents.json` - Created agents with metadata
-- `simulation_transcripts.json` - Raw simulation event logs
-- `simulation_transcript_readable.txt` - Human-readable transcript
-- `performance_metrics.json` - Performance analysis by role
-- `compliance_report.json` - Compliance violations and recommendations
-- `compliance_report.txt` - Human-readable compliance report
-
-### What This Tests
-
-This test exposes missing functionality including:
+E2E tests validate the TinyVerse web interface and backend integration, including:
 
 - **Simulation control** - Start/stop/step operations
 - **Agent interactions** - Multi-agent communication
@@ -47,6 +15,16 @@ This test exposes missing functionality including:
 - **State management** - Tracking simulation state changes
 - **Relationship dynamics** - How agents interact based on relationships
 - **Location-based behavior** - How environment affects actions
+
+### Artifacts Generated
+
+Test artifacts are saved to `test-artifacts/` directory and include:
+
+- Location and agent configurations
+- Simulation transcripts (JSON and readable text)
+- Performance metrics
+- Compliance reports
+- Generated images and exports
 
 ### Running the Test
 

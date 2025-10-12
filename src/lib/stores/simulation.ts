@@ -6,6 +6,7 @@ import type {
 } from '../api/types';
 import { toastStore } from './toast';
 import { normalizeSimulationLog } from '../utils/simulation';
+import { timelineStore } from './timeline';
 
 export type { SimulationLog } from './types';
 
@@ -59,6 +60,22 @@ function createSimulationStore() {
       map.set(log.id, log);
     }
     return Array.from(map.values()).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }
+  
+  function getActiveBeatContext(): string | undefined {
+    const timeline = timelineStore;
+    let beats: any[] = [];
+    
+    // Subscribe to get current value
+    const unsubscribe = timeline.subscribe(state => {
+      beats = state.beats ?? [];
+    });
+    unsubscribe();
+    
+    const activeBeat = beats.find(beat => beat.status === 'active');
+    if (!activeBeat) return undefined;
+    
+    return `${activeBeat.title}: ${activeBeat.description}`;
   }
 
   function applyControlResponse(response?: SimulationControlResponseDTO) {
@@ -130,13 +147,23 @@ function createSimulationStore() {
       update(state => ({ ...state, isBusy: true, isRunning: true }));
 
       try {
-        const response = await api.controlSimulation('start', steps);
+        const beatContext = getActiveBeatContext();
+        const response = await api.controlSimulation('start', steps, { beatContext });
         applyControlResponse(response.data);
         await fetchLogs();
-      } catch (error) {
+        
+        // Evaluate beat triggers on simulation start
+        timelineStore.evaluateTriggers({ step: 0, agents: [] });
+      } catch (error: any) {
         update(state => ({ ...state, isRunning: false }));
         console.error('Failed to start simulation', error);
-        toastStore.error('Failed to start simulation');
+        
+        // Handle 409 Conflict - simulation already running
+        if (error?.status === 409 || error?.code === 'HTTP_409') {
+          toastStore.warning('Simulation is already running. Try stopping it first.');
+        } else {
+          toastStore.error('Failed to start simulation');
+        }
         throw error;
       } finally {
         update(state => ({ ...state, isBusy: false }));
@@ -161,9 +188,19 @@ function createSimulationStore() {
       lastUpdateTime = Date.now();
       update(state => ({ ...state, isBusy: true }));
       try {
-        const response = await api.controlSimulation('step', steps);
+        const beatContext = getActiveBeatContext();
+        const response = await api.controlSimulation('step', steps, { beatContext });
         applyControlResponse(response.data);
         await fetchLogs();
+        
+        // Evaluate beat triggers after each step
+        const currentState = await new Promise<SimulationState>((resolve) => {
+          const unsubscribe = subscribe(state => {
+            unsubscribe();
+            resolve(state);
+          });
+        });
+        timelineStore.onSimulationStep(currentState.currentStep);
       } catch (error) {
         console.error('Failed to step simulation', error);
         toastStore.error('Failed to advance simulation');
@@ -189,6 +226,11 @@ function createSimulationStore() {
       });
 
       const finalLog = log.id ? { ...normalized, id: log.id } : normalized;
+      
+      // Evaluate beat triggers for agent actions
+      if (finalLog.agentName && finalLog.action) {
+        timelineStore.onAgentAction(finalLog.agentName, finalLog.action, state.currentStep);
+      }
 
       return {
         ...state,

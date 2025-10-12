@@ -113,6 +113,7 @@ class SimulationControl(BaseModel):
     """Simulation control schema."""
     action: str = Field(..., pattern="^(start|pause|stop|step)$")
     steps: Optional[int] = Field(1, gt=0)
+    beat_context: Optional[str] = Field(None, description="Optional narrative context to guide agent behavior")
 
 
 class SimulationState(BaseModel):

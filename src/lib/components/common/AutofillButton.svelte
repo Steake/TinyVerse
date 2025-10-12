@@ -9,103 +9,68 @@
   export let onValue: (value: any) => void;
   export let title = 'Autofill';
   export let disabled = false;
-
-  let loading = false;
-  let localPrompt = '';
-  let feedbackVisible = false;
-  let feedbackMessage = '';
-  let feedbackTimer: number | undefined;
+  export let icon = '✨';
 
   const dispatch = createEventDispatcher<{ value: any; loading: boolean }>();
 
-  function showFeedback(message: string, durationMs?: number) {
-    feedbackMessage = message;
-    feedbackVisible = true;
-    if (feedbackTimer !== undefined) {
-      window.clearTimeout(feedbackTimer);
-      feedbackTimer = undefined;
+  let state: 'idle' | 'loading' | 'success' | 'error' = 'idle';
+  let statusMessage = '';
+  let resetTimer: number | undefined;
+
+  function showFeedback(message: string, nextState: 'success' | 'error') {
+    statusMessage = message;
+    state = nextState;
+    scheduleReset();
+  }
+
+  function scheduleReset() {
+    if (resetTimer !== undefined) {
+      window.clearTimeout(resetTimer);
     }
-    if (durationMs && durationMs > 0) {
-      feedbackTimer = window.setTimeout(() => {
-        feedbackVisible = false;
-        feedbackTimer = undefined;
-      }, durationMs);
-    }
+    resetTimer = window.setTimeout(() => {
+      state = 'idle';
+      statusMessage = '';
+      resetTimer = undefined;
+    }, 2400);
   }
 
   async function handleClick() {
-    if (disabled || loading) return;
-    loading = true;
-    showFeedback('Generating suggestion…');
+    if (disabled || state === 'loading') return;
+    state = 'loading';
+    statusMessage = 'Generating suggestion…';
     dispatch('loading', true);
     try {
-      const value = await runFieldAutofill(scope, field, seed, localPrompt || undefined);
+      const value = await runFieldAutofill(scope, field, seed, undefined);
       if (onValue && value !== undefined) onValue(value);
       dispatch('value', value);
-      showFeedback(value === undefined ? 'No suggestion returned.' : 'Suggestion applied.', 3000);
+      showFeedback(value === undefined ? 'No suggestion returned.' : 'Suggestion applied.', value === undefined ? 'error' : 'success');
     } catch (e: any) {
       const message = e?.message ?? 'Autofill failed.';
-      showFeedback(message, 4000);
+      showFeedback(message, 'error');
     } finally {
-      loading = false;
       dispatch('loading', false);
-      if (!feedbackTimer) {
-        feedbackVisible = false;
-      }
-    }
-  }
-
-  function handlePromptKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      handleClick();
     }
   }
 
   onDestroy(() => {
-    if (feedbackTimer !== undefined) {
-      window.clearTimeout(feedbackTimer);
+    if (resetTimer !== undefined) {
+      window.clearTimeout(resetTimer);
     }
   });
+
+  $: buttonLabel = title;
+  $: currentIcon = state === 'loading' ? '⏳' : state === 'success' ? '✅' : state === 'error' ? '⚠️' : icon;
 </script>
 
-<div
-  class="autofill-panel"
-  data-loading={loading ? 'true' : 'false'}
-  aria-live="polite"
+<button
+  type="button"
+  class="autofill-chip"
+  data-state={state}
+  aria-label={buttonLabel}
+  title={buttonLabel}
+  on:click={handleClick}
+  disabled={disabled || state === 'loading'}
 >
-  <div class="autofill-controls">
-    <input
-      class="input input-bordered input-sm autofill-prompt"
-      type="text"
-      placeholder="Custom prompt (optional)"
-      bind:value={localPrompt}
-      aria-label={`${title} prompt override`}
-      disabled={loading}
-      on:keydown={handlePromptKeydown}
-    />
-    <button
-      type="button"
-      class="btn btn-sm btn-secondary autofill-trigger"
-      aria-label={title}
-      aria-busy={loading ? 'true' : undefined}
-      on:click={handleClick}
-      disabled={disabled || loading}
-    >
-      {#if loading}
-        <span class="loading loading-xs" aria-hidden="true"></span>
-        Generating…
-      {:else}
-        ✨ Autofill
-      {/if}
-    </button>
-  </div>
-  <div
-    class="autofill-status"
-    data-visible={feedbackVisible ? 'true' : 'false'}
-    role="status"
-  >
-    {feedbackMessage}
-  </div>
-  <div class="autofill-hint">If empty, the global prompt will be used.</div>
-</div>
+  {currentIcon}
+</button>
+<span class="autofill-status" aria-live="polite">{statusMessage}</span>
