@@ -123,10 +123,22 @@ export class WebSocketService {
         break;
 
       case 'simulation_started':
+        // Sync state on start to ensure UI reflects backend
+        await worldStore.fetchSimulationState();
+        const startState = get(worldStore);
+        if (startState?.simulationState) {
+          simulationStore.syncFromBackend(startState.simulationState);
+        }
         toastStore.success('Simulation started');
         break;
 
       case 'simulation_paused':
+        // Sync state on pause to ensure UI reflects backend
+        await worldStore.fetchSimulationState();
+        const pauseState = get(worldStore);
+        if (pauseState?.simulationState) {
+          simulationStore.syncFromBackend(pauseState.simulationState);
+        }
         toastStore.info('Simulation paused');
         break;
 
