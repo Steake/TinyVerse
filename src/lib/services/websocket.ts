@@ -25,6 +25,11 @@ export class WebSocketService {
   // Track processed logs to avoid duplicate bubbles
   private seenLogKeys: string[] = [];
   private fetchingLogs = false;
+  
+  // Message queue for throttled display
+  private messageQueue: Array<{ log: any; key: string }> = [];
+  private isProcessingQueue = false;
+  private messageDelay = 800; // ms between messages
 
   constructor(url: string = 'ws://localhost:8000/ws') {
     this.url = url;
@@ -159,6 +164,9 @@ export class WebSocketService {
       this.ws.close();
       this.ws = null;
     }
+    // Clear any pending messages in queue
+    this.messageQueue = [];
+    this.isProcessingQueue = false;
   }
 
   send(type: string, data: any): void {
@@ -171,6 +179,21 @@ export class WebSocketService {
 
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
+  }
+  
+  /**
+   * Set the delay between speech bubble displays (in milliseconds).
+   * Lower values = faster display, higher values = more readable.
+   */
+  setMessageDelay(delayMs: number): void {
+    this.messageDelay = Math.max(100, Math.min(3000, delayMs));
+  }
+  
+  /**
+   * Get current queue size (useful for UI feedback).
+   */
+  getQueueSize(): number {
+    return this.messageQueue.length;
   }
 
   /**
@@ -197,48 +220,75 @@ export class WebSocketService {
 
   private projectEntries(entries: any[]) {
     const ordered = [...entries].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    
+    // Add entries to queue for throttled display
     for (const log of ordered) {
       const key = this.buildLogKey(log);
       if (this.hasSeen(key)) continue;
-
-      const content: string = this.extractContent(log);
-      if (!content || typeof content !== 'string' || content.trim().length === 0) {
-        this.markSeen(key);
-        continue;
-      }
-
-      // Resolve agent id
-      let agentId: string | undefined = (log.agentId || log.agent_id) as string | undefined;
-      if (!agentId) {
-        const byName = (get(agentStore) || []).find((a: any) => a?.name && a.name === (log.agentName || log.agent_name));
-        agentId = byName?.id;
-      }
-      if (!agentId) {
-        this.markSeen(key);
-        continue;
-      }
-
-      const stage = get(stageStore) as any;
-      const isActive = Array.isArray(stage?.activeAgents) && stage.activeAgents.includes(agentId);
-      if (!isActive) {
-        const x = 100 + Math.random() * 600;
-        const y = 120 + Math.random() * 360;
-        stageStore.addAgent(agentId, { x, y });
-      }
-
-      const interaction: Interaction = {
-        id: this.makeInteractionId(agentId, key),
-        type: 'conversation',
-        participants: [agentId],
-        content: content.trim(),
-        startTime: new Date(log.timestamp || Date.now()),
-        duration: this.estimateDurationMs(content),
-        mood: 'neutral'
-      };
-      stageStore.addInteraction(interaction);
-
+      
+      this.messageQueue.push({ log, key });
       this.markSeen(key);
     }
+    
+    // Start processing queue if not already running
+    if (!this.isProcessingQueue) {
+      this.processQueue();
+    }
+  }
+  
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+    
+    while (this.messageQueue.length > 0) {
+      const item = this.messageQueue.shift();
+      if (!item) break;
+      
+      await this.displayMessage(item.log, item.key);
+      
+      // Add delay between messages for staggered effect
+      if (this.messageQueue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.messageDelay));
+      }
+    }
+    
+    this.isProcessingQueue = false;
+  }
+  
+  private async displayMessage(log: any, key: string): Promise<void> {
+    const content: string = this.extractContent(log);
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      return;
+    }
+
+    // Resolve agent id
+    let agentId: string | undefined = (log.agentId || log.agent_id) as string | undefined;
+    if (!agentId) {
+      const byName = (get(agentStore) || []).find((a: any) => a?.name && a.name === (log.agentName || log.agent_name));
+      agentId = byName?.id;
+    }
+    if (!agentId) {
+      return;
+    }
+
+    const stage = get(stageStore) as any;
+    const isActive = Array.isArray(stage?.activeAgents) && stage.activeAgents.includes(agentId);
+    if (!isActive) {
+      const x = 100 + Math.random() * 600;
+      const y = 120 + Math.random() * 360;
+      stageStore.addAgent(agentId, { x, y });
+    }
+
+    const interaction: Interaction = {
+      id: this.makeInteractionId(agentId, key),
+      type: 'conversation',
+      participants: [agentId],
+      content: content.trim(),
+      startTime: new Date(log.timestamp || Date.now()),
+      duration: this.estimateDurationMs(content),
+      mood: 'neutral'
+    };
+    stageStore.addInteraction(interaction);
   }
 
   private extractContent(log: any): string {
