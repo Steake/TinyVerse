@@ -10,7 +10,7 @@ import logging
 import sys
 import textwrap
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -66,7 +66,9 @@ class TinyTroupeAdapter:
         self.agent_metadata: Dict[str, Dict[str, Any]] = {}
         self.locations: Dict[str, Dict[str, Any]] = {}
         self.connections: Dict[str, Dict[str, Any]] = {}
-        self.world = TinyWorld("TinyVerse Simulation")
+        # Initialize world with a consistent start time (9 AM) for better UX
+        initial_time = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        self.world = TinyWorld("TinyVerse Simulation", initial_datetime=initial_time)
         self.simulation_running = False
         self.current_step = 0
         self._agent_name_to_id: Dict[str, str] = {}
@@ -344,9 +346,10 @@ class TinyTroupeAdapter:
         self._last_log_index = 0
         self.simulation_running = False
         self.current_step = 0
-        # Recreate world
+        # Recreate world with consistent start time
         try:
-            self.world = TinyWorld("TinyVerse Simulation")
+            initial_time = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+            self.world = TinyWorld("TinyVerse Simulation", initial_datetime=initial_time)
         except Exception:
             # As a fallback, leave world as-is if TinyWorld ctor fails
             pass
@@ -1387,7 +1390,9 @@ Consider how your character would naturally respond to this situation.
 """
                 self.world.broadcast(narrative_prompt)
             
-            self.world.run(steps)
+            # Advance simulation time with each step (15 minutes per step)
+            step_duration = timedelta(minutes=15)
+            self.world.run(steps, timedelta_per_step=step_duration)
             self.current_step += steps
             
             # Update agent locations based on recent actions (best-effort, don't crash simulation)
@@ -1520,11 +1525,21 @@ Consider: movement verbs (go, walk, move, enter), location mentions, activity co
         Returns:
             Dictionary with simulation state information
         """
+        # Get current datetime from TinyWorld
+        current_datetime = getattr(self.world, "current_datetime", None)
+        time_str = current_datetime.strftime("%H:%M") if current_datetime else "00:00"
+        
+        # Weather is not directly tracked in TinyWorld, default to sunny
+        # TODO: Add weather tracking to TinyWorld or extract from environment state
+        weather = "sunny"
+        
         return {
             "is_running": self.simulation_running,
             "current_step": self.current_step,
             "agents_count": len(self.agents),
             "world_name": self.world.name,
+            "time": time_str,
+            "weather": weather,
         }
     
     def create_location(self, location_data: Dict[str, Any]) -> Dict[str, Any]:

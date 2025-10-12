@@ -96,6 +96,20 @@
   worldStore.subscribe((state: any) => {
     locations = state?.locations ?? [];
     connections = state?.connections ?? [];
+    
+    // Sync simulation state to stage (time, weather)
+    if (state?.simulationState) {
+      if (state.simulationState.time) {
+        // Parse time string (HH:MM) and update stage
+        const [hours, minutes] = state.simulationState.time.split(':').map(Number);
+        const now = new Date();
+        now.setHours(hours, minutes, 0, 0);
+        stageStore.updateTime(now);
+      }
+      if (state.simulationState.weather) {
+        stageStore.updateWeather(state.simulationState.weather);
+      }
+    }
   });
 
   // Seed stage layout from agents if empty
