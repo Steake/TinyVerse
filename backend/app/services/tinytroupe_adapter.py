@@ -1390,8 +1390,11 @@ Consider how your character would naturally respond to this situation.
             self.world.run(steps)
             self.current_step += steps
             
-            # Update agent locations based on recent actions
-            self._update_agent_locations_from_actions()
+            # Update agent locations based on recent actions (best-effort, don't crash simulation)
+            try:
+                self._update_agent_locations_from_actions()
+            except Exception as e:
+                logger.warning(f"Failed to update agent locations: {e}")
         finally:
             self.simulation_running = False
     
@@ -1496,22 +1499,8 @@ Consider: movement verbs (go, walk, move, enter), location mentions, activity co
                             db_agent.current_location = target_loc.id
                             db.commit()
                             
-                            # Broadcast movement event (import here to avoid circular dependency)
-                            import asyncio
-                            from app.api.websocket import broadcast_simulation_event
-                            
-                            # Run async broadcast in sync context
-                            try:
-                                loop = asyncio.get_event_loop()
-                            except RuntimeError:
-                                loop = asyncio.new_event_loop()
-                                asyncio.set_event_loop(loop)
-                            
-                            loop.run_until_complete(broadcast_simulation_event("agent_moved", {
-                                "agent_id": agent_id,
-                                "location_id": target_loc.id,
-                                "position": {"x": target_loc.x, "y": target_loc.y}
-                            }))
+                            # Note: WebSocket broadcast skipped in sync context
+                            # Frontend will update on next poll or manual refresh
                 
                 except Exception as e:
                     logger.warning(f"Failed to update location for {agent_name}: {e}")
