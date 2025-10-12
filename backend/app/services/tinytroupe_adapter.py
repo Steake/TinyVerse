@@ -204,6 +204,7 @@ class TinyTroupeAdapter:
         self.agent_metadata[agent_id] = {
             "id": agent_id,
             "name": agent_data["name"],
+            "emoji": agent_data.get("emoji", "👤"),
             "age": agent_data["age"],
             "occupation": agent_data["occupation"],
             "created_at": datetime.now(timezone.utc),
@@ -275,6 +276,9 @@ class TinyTroupeAdapter:
             person.define("age", update_data["age"])
         if "occupation" in update_data:
             person.define("occupation", update_data["occupation"])
+        if "emoji" in update_data:
+            # Store emoji in metadata (not in TinyPerson since it's UI-only)
+            pass
         
         return self.get_agent(agent_id)
     
@@ -1048,6 +1052,14 @@ class TinyTroupeAdapter:
         payload.setdefault("personal_interests", [])
         payload.setdefault("skills", [])
         payload.setdefault("backstory", "")
+        payload.setdefault("emoji", "👤")  # Default fallback emoji
+
+        # Normalize emoji: trim whitespace, take first character
+        emoji = str(payload.get("emoji", "")).strip()
+        if emoji:
+            payload["emoji"] = emoji[0] if emoji else "👤"
+        else:
+            payload["emoji"] = "👤"
 
         # Normalize scalar types
         try:

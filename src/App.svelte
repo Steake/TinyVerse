@@ -12,6 +12,8 @@
   import ToastContainer from './lib/components/common/ToastContainer.svelte';
   import GlobalAutofillBar from './lib/components/common/GlobalAutofillBar.svelte';
   import ThemeToggle from './lib/components/common/ThemeToggle.svelte';
+  import SimulationStatusBadge from './lib/components/ui/SimulationStatusBadge.svelte';
+  import TokenCounterFooter from './lib/components/TokenCounterFooter.svelte';
   import { runGlobalAutofill } from './lib/stores/autofill';
   import { api } from './lib/api';
   import { wsService } from './lib/services/websocket';
@@ -72,9 +74,10 @@
       <div class="flex items-center justify-center h-full">
         <p class="text-danger">{error}</p>
       </div>
-    {:else if activeSection === 'playwright-desk'}
+      {:else if activeSection === 'playwright-desk'}
   <Topbar title="Playwright's Desk" subtitle="Build your world, assemble your cast, connect their minds" onPrimary={() => {}}>
-        <div slot="actions" class="flex items-center gap-2">
+        <div slot="actions" class="flex items-center gap-4">
+          <SimulationStatusBadge />
           <ThemeToggle />
           <button class="btn btn-accent btn-sm" type="button" on:click={openWizard}>
             Start new simulation
@@ -120,7 +123,12 @@
     {/if}
   </div>
     {:else if activeSection === 'grand-stage'}
-  <Topbar title="Grand Stage" subtitle="Simulate scenes across your TinyVerse" onPrimary={() => {}} />
+  <Topbar title="Grand Stage" subtitle="Simulate scenes across your TinyVerse" onPrimary={() => {}}>
+        <div slot="actions" class="flex items-center gap-4">
+          <SimulationStatusBadge />
+          <ThemeToggle />
+        </div>
+      </Topbar>
       <GrandStage />
     {:else if activeSection === 'critics-corner'}
   <Topbar title="Critic's Corner" subtitle="Inspect logs, reflect on behavior, tune parameters" onPrimary={() => {}} />
@@ -134,4 +142,5 @@
   <!-- Global toast notifications -->
   <ToastContainer />
   <SimulationWizard />
+  <TokenCounterFooter />
 </div>

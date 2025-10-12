@@ -8,6 +8,7 @@ import { applyFields } from './autofill';
 import type { Location } from './types';
 import { get } from 'svelte/store';
 import { parseJson } from '../utils/jsonParsing';
+import { tokenUsage } from './tokenUsage';
 import { toastStore } from './toast';
 
 type ScenarioPayload = {
@@ -239,6 +240,12 @@ Example for a heist scenario:
     context: contextSections.join('\n'),
     seed: { agentCount, locationCount, includeNarrative, blueprint: prompt }
   });
+
+  // Track estimated token usage
+  const promptText = contextSections.join('\n');
+  const estimatedPromptTokens = Math.ceil(promptText.length / 4);
+  const estimatedCompletionTokens = Math.ceil(JSON.stringify(response).length / 4);
+  tokenUsage.addUsage(estimatedPromptTokens, estimatedCompletionTokens);
 
   // Response already parsed; still be defensive if backend evolves
   const parsedPayload = parseJson<ScenarioPayload>(response.data as any) ?? (response.data as any);

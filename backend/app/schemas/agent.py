@@ -20,6 +20,7 @@ class Skill(SkillCreate):
 class AgentCreate(BaseModel):
     """Agent creation schema."""
     name: str
+    emoji: Optional[str] = None
     age: int = Field(gt=0)
     occupation: str
     occupation_description: Optional[str] = None
@@ -44,6 +45,7 @@ class Agent(AgentCreate):
 class AgentUpdate(BaseModel):
     """Agent update schema."""
     name: Optional[str] = None
+    emoji: Optional[str] = None
     age: Optional[int] = Field(None, gt=0)
     occupation: Optional[str] = None
     occupation_description: Optional[str] = None

@@ -2,6 +2,19 @@ import { writable, get } from 'svelte/store';
 import { api } from '../api';
 import type { AutofillRequestPayload, AutofillResponsePayload } from '../api/types';
 import { buildPromptForScope } from './prompts';
+import { tokenUsage } from './tokenUsage';
+
+// Rough estimate: ~4 chars per token (typical for English)
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+function trackTokenUsage(prompt: string, response: any) {
+  const promptTokens = estimateTokens(prompt);
+  const responseStr = JSON.stringify(response);
+  const completionTokens = estimateTokens(responseStr);
+  tokenUsage.addUsage(promptTokens, completionTokens);
+}
 
 export type AutofillScope = 'agent' | 'location' | 'environment' | 'story' | 'generic';
 
@@ -120,6 +133,10 @@ export async function runGlobalAutofill(
     } as AutofillRequestPayload;
 
     const res = await api.autofill(payload);
+    
+    // Track estimated token usage
+    trackTokenUsage(context, res);
+    
     const parsed = coerceToJson(res.data ?? res);
     const items = normalizeAutofillItems(parsed);
 

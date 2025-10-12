@@ -14,6 +14,7 @@ class Agent(Base):
     
     id = Column(String, primary_key=True, index=True)
     name = Column(String, nullable=False, index=True)
+    emoji = Column(String, nullable=True)  # Single emoji character
     age = Column(Integer, nullable=True)
     occupation = Column(String, nullable=True)
     occupation_description = Column(Text, nullable=True)
