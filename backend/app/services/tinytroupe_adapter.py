@@ -71,6 +71,7 @@ class TinyTroupeAdapter:
         self.world = TinyWorld("TinyVerse Simulation", initial_datetime=initial_time)
         self.simulation_running = False
         self.current_step = 0
+        self.current_weather = "sunny"  # Track weather state
         self._agent_name_to_id: Dict[str, str] = {}
         self._log_history: List[Dict[str, Any]] = []
         self._last_log_index = 0
@@ -346,6 +347,7 @@ class TinyTroupeAdapter:
         self._last_log_index = 0
         self.simulation_running = False
         self.current_step = 0
+        self.current_weather = "sunny"  # Reset weather
         # Recreate world with consistent start time
         try:
             initial_time = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
@@ -1518,6 +1520,44 @@ Consider: movement verbs (go, walk, move, enter), location mentions, activity co
         """Pause the simulation."""
         self.simulation_running = False
     
+    def _update_weather(self) -> str:
+        """
+        Update weather based on time of day and simulation progression.
+        Returns the current weather condition.
+        """
+        import random
+        
+        current_datetime = getattr(self.world, "current_datetime", None)
+        if not current_datetime:
+            return self.current_weather
+        
+        hour = current_datetime.hour
+        
+        # Time-based weather patterns with some randomness
+        # Morning (6-11): Tend toward clear/sunny
+        if 6 <= hour < 11:
+            weather_options = ["sunny", "sunny", "sunny", "partly cloudy", "clear"]
+        # Midday (11-15): Mix of sunny and clouds
+        elif 11 <= hour < 15:
+            weather_options = ["sunny", "sunny", "partly cloudy", "partly cloudy", "cloudy"]
+        # Afternoon (15-18): More clouds, occasional rain
+        elif 15 <= hour < 18:
+            weather_options = ["partly cloudy", "cloudy", "cloudy", "overcast", "light rain"]
+        # Evening (18-21): Clearing up or rain
+        elif 18 <= hour < 21:
+            weather_options = ["partly cloudy", "clear", "cloudy", "light rain"]
+        # Night (21-6): Clear or cloudy
+        else:
+            weather_options = ["clear", "clear", "partly cloudy", "cloudy"]
+        
+        # Occasionally (20% chance) keep previous weather for continuity
+        if random.random() < 0.2:
+            return self.current_weather
+        
+        # Otherwise pick from time-appropriate options
+        self.current_weather = random.choice(weather_options)
+        return self.current_weather
+    
     def get_simulation_state(self) -> Dict[str, Any]:
         """
         Get current simulation state.
@@ -1529,9 +1569,22 @@ Consider: movement verbs (go, walk, move, enter), location mentions, activity co
         current_datetime = getattr(self.world, "current_datetime", None)
         time_str = current_datetime.strftime("%H:%M") if current_datetime else "00:00"
         
-        # Weather is not directly tracked in TinyWorld, default to sunny
-        # TODO: Add weather tracking to TinyWorld or extract from environment state
-        weather = "sunny"
+        # Update and get current weather based on time and conditions
+        weather = self._update_weather()
+        
+        # Get agent locations from database
+        from app.database import SessionLocal
+        from app.models import Agent as DBAgent
+        
+        agent_locations = {}
+        db = SessionLocal()
+        try:
+            for agent_id in self.agents.keys():
+                db_agent = db.query(DBAgent).filter(DBAgent.id == agent_id).first()
+                if db_agent and db_agent.current_location:
+                    agent_locations[agent_id] = db_agent.current_location
+        finally:
+            db.close()
         
         return {
             "is_running": self.simulation_running,
@@ -1540,6 +1593,7 @@ Consider: movement verbs (go, walk, move, enter), location mentions, activity co
             "world_name": self.world.name,
             "time": time_str,
             "weather": weather,
+            "agent_locations": agent_locations,  # Map of agent_id -> location_id
         }
     
     def create_location(self, location_data: Dict[str, Any]) -> Dict[str, Any]:

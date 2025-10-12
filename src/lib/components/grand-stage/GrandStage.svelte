@@ -97,7 +97,7 @@
     locations = state?.locations ?? [];
     connections = state?.connections ?? [];
     
-    // Sync simulation state to stage (time, weather)
+    // Sync simulation state to stage (time, weather, agent locations)
     if (state?.simulationState) {
       if (state.simulationState.time) {
         // Parse time string (HH:MM) and update stage
@@ -108,6 +108,24 @@
       }
       if (state.simulationState.weather) {
         stageStore.updateWeather(state.simulationState.weather);
+      }
+      // Update agent positions based on their locations
+      if (state.simulationState.agent_locations && locations.length > 0) {
+        const agentLocations = state.simulationState.agent_locations;
+        for (const [agentId, locationId] of Object.entries(agentLocations)) {
+          // Find location coordinates
+          const location = locations.find((loc: any) => loc.id === locationId);
+          if (location && location.x !== undefined && location.y !== undefined) {
+            // Position agent at location with slight random offset to avoid overlap
+            const offsetX = (Math.random() - 0.5) * 40; // +/- 20px
+            const offsetY = (Math.random() - 0.5) * 40;
+            stageStore.updateAgentPosition(
+              agentId as string, 
+              location.x + offsetX, 
+              location.y + offsetY
+            );
+          }
+        }
       }
     }
   });
