@@ -1366,8 +1366,8 @@ class TinyTroupeAdapter:
     
     def _ensure_default_locations(self) -> None:
         """
-        Create default locations if none exist in the database.
-        This ensures agent location tracking has somewhere to place agents.
+        Create contextually appropriate locations if none exist in the database.
+        Uses LLM to generate locations based on the agents and their context.
         """
         from app.database import SessionLocal
         from app.models import Location
@@ -1378,26 +1378,113 @@ class TinyTroupeAdapter:
             if location_count > 0:
                 return  # Locations already exist
             
-            logger.info("No locations found - creating default locations for agent movement")
+            logger.info("No locations found - generating contextual locations based on agents")
             
-            # Create a simple set of default locations in a grid pattern
-            default_locations = [
-                {"name": "Office", "description": "Main office space", "location_type": "indoor", 
-                 "x": 200.0, "y": 200.0, "width": 150.0, "height": 150.0},
-                {"name": "Meeting Room", "description": "Conference room", "location_type": "indoor",
-                 "x": 400.0, "y": 200.0, "width": 150.0, "height": 150.0},
-                {"name": "Cafeteria", "description": "Break room and cafeteria", "location_type": "indoor",
-                 "x": 200.0, "y": 400.0, "width": 150.0, "height": 150.0},
-                {"name": "Lounge", "description": "Relaxation area", "location_type": "indoor",
-                 "x": 400.0, "y": 400.0, "width": 150.0, "height": 150.0},
-                {"name": "Lobby", "description": "Main entrance", "location_type": "indoor",
-                 "x": 300.0, "y": 100.0, "width": 150.0, "height": 80.0},
-            ]
+            # Get agent context
+            agent_descriptions = []
+            for agent_id, person in self.agents.items():
+                metadata = self.agent_metadata.get(agent_id, {})
+                occupation = metadata.get("occupation", "person")
+                name = metadata.get("name", "Agent")
+                agent_descriptions.append(f"- {name}: {occupation}")
             
-            for loc_data in default_locations:
-                self.create_location(loc_data)
+            if not agent_descriptions:
+                logger.warning("No agents found - creating generic locations")
+                agent_context = "Generic simulation environment"
+            else:
+                agent_context = "\n".join(agent_descriptions)
             
-            logger.info(f"Created {len(default_locations)} default locations")
+            # Use LLM to generate appropriate locations
+            try:
+                from tinytroupe.utils.llm import LLMChat
+                
+                prompt = f"""Given these agents in a simulation:
+
+{agent_context}
+
+Generate 5-7 diverse locations where these agents would naturally interact and conduct their activities. 
+For each location provide:
+- name: Short descriptive name (e.g., "Conference Room", "Coffee Shop")
+- description: Brief description of the space
+- location_type: Either "indoor" or "outdoor"
+
+Consider the agents' occupations and create locations that make sense for their activities.
+Include a mix of work spaces, social spaces, and transition areas.
+
+Respond with ONLY valid JSON array format:
+[
+  {{"name": "Location Name", "description": "Brief description", "location_type": "indoor"}},
+  ...
+]"""
+
+                chat = LLMChat(
+                    system_prompt="You generate location data for simulations. Respond ONLY with valid JSON.",
+                    user_prompt=prompt,
+                    output_type=str,
+                    enable_json_output_format=True,
+                    enable_justification_step=False,
+                )
+                response = chat.call().strip()
+                
+                # Parse JSON response
+                import json
+                try:
+                    locations_data = json.loads(response)
+                except json.JSONDecodeError:
+                    # Try to extract JSON from response
+                    import re
+                    json_match = re.search(r'\[.*\]', response, re.DOTALL)
+                    if json_match:
+                        locations_data = json.loads(json_match.group())
+                    else:
+                        raise ValueError("Could not parse JSON from LLM response")
+                
+                if not isinstance(locations_data, list):
+                    raise ValueError("Expected JSON array of locations")
+                
+                # Position locations in a grid pattern
+                grid_size = 200.0
+                grid_cols = 3
+                x_start, y_start = 100.0, 100.0
+                
+                created_count = 0
+                for idx, loc_data in enumerate(locations_data[:7]):  # Max 7 locations
+                    row = idx // grid_cols
+                    col = idx % grid_cols
+                    
+                    location_dict = {
+                        "name": loc_data.get("name", f"Location {idx+1}"),
+                        "description": loc_data.get("description", ""),
+                        "location_type": loc_data.get("location_type", "indoor"),
+                        "x": x_start + col * grid_size,
+                        "y": y_start + row * grid_size,
+                        "width": 150.0,
+                        "height": 150.0,
+                    }
+                    
+                    self.create_location(location_dict)
+                    created_count += 1
+                
+                logger.info(f"Created {created_count} contextual locations via LLM")
+                
+            except Exception as e:
+                logger.warning(f"Failed to generate locations via LLM: {e}, falling back to generic locations")
+                # Fallback to generic locations if LLM fails
+                default_locations = [
+                    {"name": "Main Area", "description": "Central gathering space", "location_type": "indoor", 
+                     "x": 200.0, "y": 200.0, "width": 150.0, "height": 150.0},
+                    {"name": "Meeting Space", "description": "Collaborative workspace", "location_type": "indoor",
+                     "x": 400.0, "y": 200.0, "width": 150.0, "height": 150.0},
+                    {"name": "Common Area", "description": "Shared social space", "location_type": "indoor",
+                     "x": 200.0, "y": 400.0, "width": 150.0, "height": 150.0},
+                    {"name": "Quiet Zone", "description": "Focused work area", "location_type": "indoor",
+                     "x": 400.0, "y": 400.0, "width": 150.0, "height": 150.0},
+                ]
+                
+                for loc_data in default_locations:
+                    self.create_location(loc_data)
+                
+                logger.info(f"Created {len(default_locations)} fallback locations")
             
         finally:
             db.close()
