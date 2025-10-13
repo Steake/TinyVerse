@@ -1596,9 +1596,15 @@ Consider how your character would naturally respond to this situation.
             
             logger.info(f"Updating agent locations - {len(locations)} locations available")
             
+            # Build location context with spatial information
             location_context = "\n".join([
-                f"- {loc.name} ({loc.location_type}): {loc.description or 'No description'}"
+                f"- {loc.name} ({loc.location_type}) at position ({loc.x:.0f}, {loc.y:.0f}): {loc.description or 'No description'}"
                 for loc in locations
+            ])
+            
+            # Add spatial layout summary
+            layout_summary = "Layout: " + ", ".join([
+                f"{loc.name} ({loc.x:.0f},{loc.y:.0f})" for loc in locations
             ])
             
             # Get recent communications for each agent
@@ -1644,26 +1650,36 @@ Consider how your character would naturally respond to this situation.
                     current_loc = db.query(Location).filter(Location.id == db_agent.current_location).first()
                     if current_loc:
                         current_loc_name = current_loc.name
+                        current_loc_coords = f"({current_loc.x:.0f}, {current_loc.y:.0f})"
+                    else:
+                        current_loc_coords = "unknown"
                 
                 prompt = f"""Based on the following recent actions by {agent_name}, determine which location they should currently be at.
 
-Current location: {current_loc_name}
+Current location: {current_loc_name} at {current_loc_coords}
 
-Available locations:
+Available locations with spatial layout:
 {location_context}
+
+{layout_summary}
 
 Recent actions:
 {actions_summary}
 
-Respond with ONLY the exact location name from the list above, or "STAY" if they should remain at their current location.
-Consider: movement verbs (go, walk, move, enter), location mentions, activity context."""
+Consider:
+- Movement verbs (go, walk, move, enter, head to, travel)
+- Location mentions in actions
+- Activity context (what they're doing suggests where they'd be)
+- Spatial relationships (nearby locations vs distant ones)
+
+Respond with ONLY the exact location name from the list above, or "STAY" if they should remain at their current location."""
 
                 try:
                     # Use TinyTroupe's LLM configuration
                     from tinytroupe.utils.llm import LLMChat
                     
                     chat = LLMChat(
-                        system_prompt="You determine agent locations based on their actions. Reply with only the location name or 'STAY'.",
+                        system_prompt="You determine agent locations in a spatial simulation. Consider both actions and spatial layout. Reply with only the location name or 'STAY'.",
                         user_prompt=prompt,
                         output_type=str,
                         enable_json_output_format=False,
