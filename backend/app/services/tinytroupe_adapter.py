@@ -1489,6 +1489,47 @@ Respond with ONLY valid JSON array format:
         finally:
             db.close()
     
+    def _assign_initial_locations(self) -> None:
+        """
+        Assign initial locations to agents that don't have one.
+        Distributes agents across available locations.
+        """
+        from app.database import SessionLocal
+        from app.models import Agent as DBAgent, Location
+        
+        db = SessionLocal()
+        try:
+            # Get all locations
+            locations = db.query(Location).all()
+            if not locations:
+                logger.warning("No locations available for initial agent placement")
+                return
+            
+            # Get agents without locations
+            unplaced_agents = []
+            for agent_id in self.agents.keys():
+                db_agent = db.query(DBAgent).filter(DBAgent.id == agent_id).first()
+                if db_agent and not db_agent.current_location:
+                    unplaced_agents.append(db_agent)
+            
+            if not unplaced_agents:
+                logger.info("All agents already have locations")
+                return
+            
+            # Distribute agents across locations
+            logger.info(f"Assigning initial locations to {len(unplaced_agents)} agents")
+            for idx, agent in enumerate(unplaced_agents):
+                # Cycle through locations to distribute agents
+                location = locations[idx % len(locations)]
+                agent.current_location = location.id
+                logger.info(f"Placed {agent.name} at {location.name}")
+            
+            db.commit()
+            logger.info(f"Initial location assignment complete")
+            
+        finally:
+            db.close()
+    
     def run_simulation(self, steps: int = 1, beat_context: Optional[str] = None) -> None:
         """
         Run the simulation for a specified number of steps.
@@ -1505,6 +1546,8 @@ Respond with ONLY valid JSON array format:
 
         # Ensure default locations exist for agent movement
         self._ensure_default_locations()
+        # Assign initial locations to agents that don't have one
+        self._assign_initial_locations()
 
         self.simulation_running = True
         try:
